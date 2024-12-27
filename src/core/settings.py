@@ -1,3 +1,7 @@
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -15,3 +19,9 @@ class Database(BaseSettings):
 
 db_settings = Database()
 bot_settings = Settings()
+
+bot = Bot(
+    token=bot_settings.BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
+dp = Dispatcher(storage=MemoryStorage())
