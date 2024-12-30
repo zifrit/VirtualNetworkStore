@@ -22,6 +22,14 @@ class BaseManager[Model: Base]:
         )
         return result
 
+    async def get_all(self, session: AsyncSession) -> list[Model]:
+        result = await session.scalars(
+            select(self._model).where(
+                self._model.deleted_at.is_(None),
+            )
+        )
+        return list(result)
+
     async def create(
         self, session: AsyncSession, obj_schema: BaseSchema, *args, **kwargs
     ) -> Model:

@@ -6,11 +6,11 @@ start_inline_button = InlineKeyboardMarkup(
         [
             InlineKeyboardButton(
                 text="🛡️Купить VPN",
-                callback_data="buy_vpn",
+                callback_data="buy_virtual_network",
             ),
             InlineKeyboardButton(
                 text="🛡️Мой VPN",
-                callback_data="my_vpn",
+                callback_data="my_virtual_network",
             ),
         ],
         [
