@@ -5,6 +5,7 @@ from aiogram import types
 from src.core.settings import bot, dp, bot_settings
 from src.core.logger import LOGGING
 from src.utils.middleware import DatabaseMiddleware
+from src.handlers import start
 
 loger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ async def stop_bot():
 
 
 async def main():
+    # регистрация роутов
+    dp.include_router(start.router)
 
     # регистрация мидлварей
     dp.update.middleware.register(DatabaseMiddleware())
