@@ -1,12 +1,16 @@
 from src.schemas.base import BaseSchema
 
 
-class UserSchema(BaseSchema):
+class TgUserSchema(BaseSchema):
     username: str
     tg_id: int
 
 
-class CreateUserSchema(UserSchema):
+class ShowTgUserSchema(TgUserSchema):
+    pass
+
+
+class CreateTgUserSchema(TgUserSchema):
     pass
 
 

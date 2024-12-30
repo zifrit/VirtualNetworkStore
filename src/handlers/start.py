@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.check_sub import check_subscription
 from src.crud.user import user_manager, referral_manager
-from src.schemas.user import CreateUserSchema, CreateReferralSchema
+from src.schemas.user import CreateTgUserSchema, CreateReferralSchema
 from src.kbs import user as kbs_user
 
 
@@ -24,7 +24,7 @@ async def start_handler(
     if await check_subscription(message.from_user.id, message.bot):
         if not await user_manager.get_by_tg_id(db_session, message.from_user.id):
             loger.warning("пользователя еще нет")
-            create_user = CreateUserSchema(
+            create_user = CreateTgUserSchema(
                 username=message.from_user.username,
                 tg_id=message.from_user.id,
             )
