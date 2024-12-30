@@ -1,9 +1,25 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.models import Price, Country
 from src.crud.base import BaseManager
 
 
 class PriceManager(BaseManager[Price]):
-    pass
+
+    async def get_country_price(
+        self,
+        db_session: AsyncSession,
+        country_id: int,
+    ) -> list[Price]:
+        prices = await db_session.scalars(
+            select(self._model).where(
+                self._model.country_id == country_id,
+                self._model.deleted_at.is_(None),
+                self._model.is_active.is_(True),
+            )
+        )
+        return list(prices)
 
 
 price_manager = PriceManager(Price)
