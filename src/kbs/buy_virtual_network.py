@@ -38,3 +38,21 @@ def choice_country_tariff_inline_buttons_builder(
         )
     )
     return builder.as_markup()
+
+
+def validate_buy_virtual_network_inline_buttons(
+    user_id: int, order_receipt_id: int
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅Оплатил",
+            callback_data=f"approve_buy_virtual_network-{user_id}-{order_receipt_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌Не оплатил",
+            callback_data=f"cancel_buy_virtual_network-{user_id}-{order_receipt_id}",
+        ),
+        width=2,
+    )
+    return builder.as_markup()

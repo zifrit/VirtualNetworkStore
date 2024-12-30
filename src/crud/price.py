@@ -21,6 +21,20 @@ class PriceManager(BaseManager[Price]):
         )
         return list(prices)
 
+    async def get_price_by_price_key(
+        self,
+        db_session: AsyncSession,
+        price_key: str,
+    ) -> Price:
+        prices = await db_session.scalar(
+            select(self._model).where(
+                self._model.price_key == price_key,
+                self._model.deleted_at.is_(None),
+                self._model.is_active.is_(True),
+            )
+        )
+        return prices
+
 
 price_manager = PriceManager(Price)
 
