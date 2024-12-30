@@ -1,8 +1,8 @@
 import logging
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.utils.deep_linking import decode_payload
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.check_sub import check_subscription
 from src.crud.user import user_manager, referral_manager
@@ -60,3 +60,15 @@ async def start_handler(
         )
     else:
         await message.answer("Вы не подписались на канал !!")
+
+
+@router.callback_query(F.data == "back_to_start_menu")
+async def start_handler(call: CallbackQuery):
+    await call.message.edit_text(
+        """
+Шмель-VPN🐝: Летим без ограничений!
+Привет, друзья! Шмель-VPN – это ваш надежный спутник в мире без ограничений! Безлимитный трафик, никаких замедлений скорости – просто летите, куда хотите! 
+Все ваши любимые соцсети работают без сбоев, а выбор стран – на любой вкус!  Летим вместе с Шмель-VPN!
+    """,
+        reply_markup=kbs_user.start_inline_button,
+    )
