@@ -5,7 +5,7 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import String, BigInteger, ForeignKey
 
 if typing.TYPE_CHECKING:
-    from src.models.vpn import UserVPNs
+    from src.models.vpn import UserVirtualNetworks
     from src.models.order import Order
 
 
@@ -13,7 +13,9 @@ class TgUser(IdCUDMixin):
     __tablename__ = "tg_users"
     username: Mapped[str] = mapped_column(String(255))
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
-    user_vpn_s: Mapped[list["UserVPNs"]] = relationship(back_populates="tg_user")
+    user_virtual_networks: Mapped[list["UserVirtualNetworks"]] = relationship(
+        back_populates="tg_user"
+    )
     # # Рефералы, которых пригласил данный пользователь
     referred_users: Mapped[list["Referral"]] = relationship(
         "Referral",

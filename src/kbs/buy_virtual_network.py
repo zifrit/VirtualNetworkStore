@@ -40,18 +40,36 @@ def choice_country_tariff_inline_buttons_builder(
     return builder.as_markup()
 
 
-def validate_buy_virtual_network_inline_buttons(
-    user_id: int, order_receipt_id: int
+def admin_validate_buy_virtual_network_inline_buttons(
+    user_id: int, order_id: int
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
             text="✅Оплатил",
-            callback_data=f"approve_buy_virtual_network-{user_id}-{order_receipt_id}",
+            callback_data=f"admin_approve_buy_virtual_network-{user_id}-{order_id}",
         ),
         InlineKeyboardButton(
             text="❌Не оплатил",
-            callback_data=f"cancel_buy_virtual_network-{user_id}-{order_receipt_id}",
+            callback_data=f"admin_cancel_buy_virtual_network-{user_id}-{order_id}",
+        ),
+        width=2,
+    )
+    return builder.as_markup()
+
+
+def user_validate_buy_virtual_network_inline_buttons(
+    user_id: int, order_id: int
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="✅",
+            callback_data=f"user_approve_buy_virtual_network-{user_id}-{order_id}",
+        ),
+        InlineKeyboardButton(
+            text="❌",
+            callback_data=f"user_cancel_buy_virtual_network-{user_id}-{order_id}",
         ),
         width=2,
     )

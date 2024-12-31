@@ -1,8 +1,8 @@
-"""add orders, order_receipts, user_vpn_s, countries and prices  tables
+"""add orders, user_virtual_networks, tariffs, countries tables
 
-Revision ID: bf66f8fc89b1
+Revision ID: aa72c8804f3f
 Revises: f940dde41d8d
-Create Date: 2024-12-26 15:29:30.252190
+Create Date: 2024-12-31 17:31:49.549363
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "bf66f8fc89b1"
+revision: str = "aa72c8804f3f"
 down_revision: Union[str, None] = "f940dde41d8d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -43,7 +43,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("key_country"),
     )
     op.create_table(
-        "prices",
+        "tariffs",
         sa.Column("view_price", sa.String(length=255), nullable=False),
         sa.Column(
             "term", sa.Integer(), nullable=False, comment="Количество времени"
@@ -62,10 +62,10 @@ def upgrade() -> None:
             comment="Валюта",
         ),
         sa.Column(
-            "price_key",
+            "tariff_key",
             sa.String(length=255),
             nullable=True,
-            comment="Ключ для цены",
+            comment="Ключ для тарифа",
         ),
         sa.Column(
             "traffic_limit",
@@ -76,7 +76,7 @@ def upgrade() -> None:
         ),
         sa.Column("country_id", sa.Integer(), nullable=False),
         sa.Column(
-            "is_active", sa.Boolean(), nullable=False, comment="Статус цены"
+            "is_active", sa.Boolean(), nullable=False, comment="Статус тарифа"
         ),
         sa.Column(
             "created_at",
@@ -97,27 +97,46 @@ def upgrade() -> None:
             ["countries.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("price_key"),
+        sa.UniqueConstraint("tariff_key"),
     )
     op.create_table(
-        "user_vpn_s",
-        sa.Column("vpn_key", sa.String(length=255), nullable=False),
+        "user_virtual_networks",
+        sa.Column(
+            "virtual_network_key", sa.String(length=255), nullable=False
+        ),
         sa.Column(
             "status",
-            sa.Enum("active", "inactive", name="status_user_vpn"),
+            sa.Enum("active", "inactive", name="status_user_virtual_networks"),
             nullable=False,
-            comment="Состояние купленного впн",
+            comment="Состояние купленного виртуальной сети",
         ),
         sa.Column(
-            "type_VPN",
+            "type_virtual_networks",
             sa.Enum(
-                "vmess", "vless", "trojan", "shadowsocks", name="type_user_vpn"
+                "vmess",
+                "vless",
+                "trojan",
+                "shadowsocks",
+                name="type_user_virtual_networks",
             ),
             nullable=False,
-            comment="Тип впн",
+            comment="Тип виртуальной сети",
         ),
-        sa.Column("vpn", sa.String(length=255), nullable=False),
+        sa.Column("virtual_networks", sa.String(length=255), nullable=False),
         sa.Column("expire", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "traffic_limit",
+            sa.Integer(),
+            server_default="200",
+            nullable=False,
+            comment="Объем разрешённого трафика",
+        ),
+        sa.Column(
+            "tg_used_traffic",
+            sa.Integer(),
+            nullable=False,
+            comment="Сколько гб пользователь уже израсходовал",
+        ),
         sa.Column("tg_user_id", sa.Integer(), nullable=False),
         sa.Column(
             "created_at",
@@ -138,41 +157,13 @@ def upgrade() -> None:
             ["tg_users.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("vpn_key"),
+        sa.UniqueConstraint("virtual_network_key"),
     )
     op.create_table(
         "orders",
-        sa.Column("price_id", sa.Integer(), nullable=False),
+        sa.Column("tariff_id", sa.Integer(), nullable=False),
+        sa.Column("amount", sa.Integer(), nullable=False, comment="Сумма"),
         sa.Column("tg_user_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "status", sa.Boolean(), nullable=False, comment="Статус заказа"
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
-            nullable=False,
-        ),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["price_id"],
-            ["prices.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["tg_user_id"],
-            ["tg_users.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
-        "order_receipts",
         sa.Column(
             "currency",
             sa.Enum("dollars", "euro", "ruble", name="currency"),
@@ -185,13 +176,18 @@ def upgrade() -> None:
                 "completed",
                 "failed",
                 "in_progress",
-                name="order_receipt_status",
+                "start",
+                name="order_status",
             ),
             nullable=False,
-            comment="Статус платежа",
+            comment="Статус заказа",
         ),
-        sa.Column("amount", sa.Integer(), nullable=False, comment="Сумма"),
-        sa.Column("order_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "type",
+            sa.Enum("buy", "refill", name="order_type"),
+            nullable=False,
+            comment="Тип заказа",
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -207,8 +203,12 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["order_id"],
-            ["orders.id"],
+            ["tariff_id"],
+            ["tariffs.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tg_user_id"],
+            ["tg_users.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -217,9 +217,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table("order_receipts")
     op.drop_table("orders")
-    op.drop_table("user_vpn_s")
-    op.drop_table("prices")
+    op.drop_table("user_virtual_networks")
+    op.drop_table("tariffs")
     op.drop_table("countries")
     # ### end Alembic commands ###

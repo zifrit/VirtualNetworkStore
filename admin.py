@@ -4,8 +4,8 @@ from sqladmin import Admin, ModelView
 
 from src.core.db_connections import db_session
 from src.models.user import TgUser
-from src.models.vpn import UserVPNs, Country, Price
-from src.models.order import Order, OrderReceipt
+from src.models.vpn import UserVirtualNetworks, Country, Tariff
+from src.models.order import Order
 import uvicorn
 
 logging.basicConfig(level=logging.INFO)
@@ -25,10 +25,14 @@ class UserAdmin(ModelView, model=TgUser):
     column_details_list = [TgUser.tg_id, TgUser.username]
 
 
-class VPNAdmin(ModelView, model=UserVPNs):
-    name = "UserVPN"
-    name_plural = "UserVPNs"
-    column_list = [UserVPNs.id, UserVPNs.vpn_key, UserVPNs.type_VPN]
+class VPNAdmin(ModelView, model=UserVirtualNetworks):
+    name = "UserVirtualNetworks"
+    name_plural = "UserVirtualNetworks"
+    column_list = [
+        UserVirtualNetworks.id,
+        UserVirtualNetworks.virtual_network_key,
+        UserVirtualNetworks.type_virtual_networks,
+    ]
 
 
 class PriceAdmin(ModelView, model=Country):
@@ -37,22 +41,16 @@ class PriceAdmin(ModelView, model=Country):
     column_list = [Country.id, Country.key_country, Country.view_country]
 
 
-class UserVPNAdmin(ModelView, model=Price):
-    name = "Price"
-    name_plural = "Price"
-    column_list = [Price.id, Price.view_price, Price.price, Price.currency]
+class UserVPNAdmin(ModelView, model=Tariff):
+    name = "Tariff"
+    name_plural = "Tariffs"
+    column_list = [Tariff.id, Tariff.view_price, Tariff.price, Tariff.currency]
 
 
 class OrdersAdmin(ModelView, model=Order):
     name = "Order"
     name_plural = "Orders"
-    column_list = [Order.id, Order.status, Order.price]
-
-
-class PaymentsAdmin(ModelView, model=OrderReceipt):
-    name = "Payment"
-    name_plural = "Payments"
-    column_list = [OrderReceipt.id, OrderReceipt.status, OrderReceipt.amount]
+    column_list = [Order.id, Order.status, Order.tariff]
 
 
 admin.add_view(UserAdmin)
@@ -60,7 +58,6 @@ admin.add_view(VPNAdmin)
 admin.add_view(PriceAdmin)
 admin.add_view(UserVPNAdmin)
 admin.add_view(OrdersAdmin)
-admin.add_view(PaymentsAdmin)
 
 
 if __name__ == "__main__":

@@ -1,17 +1,17 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Price, Country
+from src.models import Tariff, Country
 from src.crud.base import BaseManager
 
 
-class PriceManager(BaseManager[Price]):
+class TariffManager(BaseManager[Tariff]):
 
-    async def get_country_price(
+    async def get_country_tariff(
         self,
         db_session: AsyncSession,
         country_id: int,
-    ) -> list[Price]:
+    ) -> list[Tariff]:
         prices = await db_session.scalars(
             select(self._model).where(
                 self._model.country_id == country_id,
@@ -21,14 +21,14 @@ class PriceManager(BaseManager[Price]):
         )
         return list(prices)
 
-    async def get_price_by_price_key(
+    async def get_tariff_by_tariff_key(
         self,
         db_session: AsyncSession,
-        price_key: str,
-    ) -> Price:
+        tariff_key: str,
+    ) -> Tariff:
         prices = await db_session.scalar(
             select(self._model).where(
-                self._model.price_key == price_key,
+                self._model.tariff_key == tariff_key,
                 self._model.deleted_at.is_(None),
                 self._model.is_active.is_(True),
             )
@@ -36,7 +36,7 @@ class PriceManager(BaseManager[Price]):
         return prices
 
 
-price_manager = PriceManager(Price)
+tariff_manager = TariffManager(Tariff)
 
 
 class CountryManager(BaseManager[Country]):
