@@ -1,18 +1,28 @@
 import datetime
 import logging
+import string
 
 from aiogram import Router, F
+from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.settings import bot_settings
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
-from src.crud.price import country_manager, tariff_manager
+from src.crud.virtual_network import (
+    country_manager,
+    tariff_manager,
+    user_virtual_networks_manager,
+)
 from src.crud.order import order_manager
 from src.crud.user import user_manager
 from src.models.order import OrderType, OrderStatus
+from src.models.vpn import StatusVirtualNetwork, TypeVirtualNetwork
 from src.schemas.order import CreateOrderSchema
+from src.schemas.virtual_network import CreateUserVirtualNetworkSchema
+from src.marzban.client import marzban_manager
+from src.utils.generate_random import generate_random_string
 
 loger = logging.getLogger(__name__)
 
@@ -88,6 +98,7 @@ async def country_price_list(
 async def choice_price_county(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
+    """Обработчик, который показывать информацию о выбранной виртуальной услуге, что бы удостоверить выбор. Создается заказ на виртуальную сеть"""
     data = await state.get_data()
     tariff_key = call.data
     tariff = await tariff_manager.get_tariff_by_tariff_key(db_session, tariff_key)
@@ -125,6 +136,7 @@ async def choice_price_county(
 async def user_approve_buy_virtual_network(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
+    """Обработчик, который срабатывает когда пользователь согласился с выбранным тарифом. В чат одмина поступит информация о заказа"""
     data = await state.get_data()
     await state.clear()
     order_id = call.data.split("-")[-1]
@@ -163,6 +175,7 @@ async def user_approve_buy_virtual_network(
 async def user_cancel_buy_virtual_network(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
+    """Обработчик, который срабатывает когда пользователь не согласился с выбранным тарифом. Тогда заказ отменяется"""
     await state.clear()
     order_id = call.data.split("-")[-1]
     order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
@@ -179,13 +192,41 @@ async def user_cancel_buy_virtual_network(
 async def payment_receipt(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
+    """Обработчик, который срабатывает когда админ подтвердил приход средств оплаты после чего в чат покупателя приходит ключ виртуальной сети"""
     await state.clear()
 
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
     order.status = OrderStatus.completed
 
     user_id = call.data.split("-")[-2]
+    user = await user_manager.get_by_tg_id(session=db_session, id_=user_id)
+
+    virtual_network_key = f"{call.from_user.username}-{generate_random_string()}"
+    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
+
+    await marzban_manager.create_virtual_network(
+        name_user_virtual_network=virtual_network_key,
+        expire=expire,
+        data_limit=order.tariff.traffic_limit,
+    )
+
+    virtual_network = await marzban_manager.get_user_virtual_network_links(
+        name_user_virtual_network=virtual_network_key
+    )
+
+    user_virtual_network_schema = CreateUserVirtualNetworkSchema(
+        virtual_network_key=virtual_network_key,
+        status=StatusVirtualNetwork.active,
+        type_virtual_networks=TypeVirtualNetwork.vless,
+        virtual_networks=virtual_network["vless"],
+        expire=expire,
+        traffic_limit=order.tariff.traffic_limit,
+        tg_user_id=user.id,
+    )
+    await user_virtual_networks_manager.create(
+        session=db_session, obj_schema=user_virtual_network_schema
+    )
     text = f"""
 {call.message.text}
 
@@ -196,7 +237,16 @@ async def payment_receipt(
     )
     await call.bot.send_message(
         chat_id=user_id,
-        text="Оплата прошла",
+        parse_mode=ParseMode.MARKDOWN,
+        text=f"""
+Оплата прошла!!
+
+Вот ваш ключ виртуальной сети:
+
+```
+{virtual_network["vless"]}
+```
+        """,
     )
 
 
@@ -204,6 +254,7 @@ async def payment_receipt(
 async def payment_receipt(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
+    """Обработчик, который срабатывает когда админ отклонил запрос так как оплата не пришла"""
     await state.clear()
 
     order_id = call.data.split("-")[-1]
