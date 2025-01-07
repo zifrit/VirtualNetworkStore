@@ -2,7 +2,7 @@ import typing
 import enum
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import ForeignKey, Enum
+from sqlalchemy import ForeignKey, Enum, String
 from src.models.vpn import Currency
 
 if typing.TYPE_CHECKING:
@@ -24,7 +24,7 @@ class OrderType(enum.Enum):
 
 class Order(IdCUDMixin):
     __tablename__ = "orders"
-
+    virtual_network_key: Mapped[str | None] = mapped_column(String(255))
     tariff_id: Mapped[int] = mapped_column(ForeignKey("tariffs.id"))
     tariff: Mapped["Tariff"] = relationship(back_populates="orders")
     amount: Mapped[int] = mapped_column(comment="Сумма")

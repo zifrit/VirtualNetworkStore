@@ -9,10 +9,10 @@ class TariffManager(BaseManager[Tariff]):
 
     async def get_country_tariff(
         self,
-        db_session: AsyncSession,
+        session: AsyncSession,
         country_id: int,
     ) -> list[Tariff]:
-        prices = await db_session.scalars(
+        prices = await session.scalars(
             select(self._model).where(
                 self._model.country_id == country_id,
                 self._model.deleted_at.is_(None),
@@ -23,10 +23,10 @@ class TariffManager(BaseManager[Tariff]):
 
     async def get_tariff_by_tariff_key(
         self,
-        db_session: AsyncSession,
+        session: AsyncSession,
         tariff_key: str,
     ) -> Tariff:
-        prices = await db_session.scalar(
+        prices = await session.scalar(
             select(self._model).where(
                 self._model.tariff_key == tariff_key,
                 self._model.deleted_at.is_(None),
@@ -47,7 +47,17 @@ country_manager = CountryManager(Country)
 
 
 class UserVirtualNetworksManager(BaseManager[UserVirtualNetworks]):
-    pass
+
+    async def get_user_virtual_network_by_virtual_network_key(
+        self, session: AsyncSession, virtual_network_key: str
+    ) -> UserVirtualNetworks:
+        user_virtual_networks = await session.scalar(
+            select(self._model).where(
+                self._model.virtual_network_key == virtual_network_key,
+                self._model.deleted_at.is_(None),
+            )
+        )
+        return user_virtual_networks
 
 
 user_virtual_networks_manager = UserVirtualNetworksManager(UserVirtualNetworks)

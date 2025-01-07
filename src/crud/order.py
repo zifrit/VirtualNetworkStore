@@ -21,5 +21,20 @@ class OrderManager(BaseManager[Order]):
         )
         return result
 
+    async def get_by_virtual_network_key_with_tariff(
+        self, session: AsyncSession, virtual_network_key: int, *args, **kwargs
+    ) -> Order:
+        result = await session.scalar(
+            select(self._model)
+            .options(joinedload(Order.tariff))
+            .where(
+                self._model.virtual_network_key == virtual_network_key,
+                self._model.deleted_at.is_(None),
+            )
+            .order_by(self._model.created_at)
+            .limit(1)
+        )
+        return result
+
 
 order_manager = OrderManager(Order)

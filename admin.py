@@ -50,7 +50,7 @@ class UserVPNAdmin(ModelView, model=Tariff):
 class OrdersAdmin(ModelView, model=Order):
     name = "Order"
     name_plural = "Orders"
-    column_list = [Order.id, Order.status, Order.tariff]
+    column_list = [Order.id, Order.status, Order.tariff, Order.type]
 
 
 admin.add_view(UserAdmin)

@@ -1,11 +1,8 @@
 import asyncio
 import logging
-import base64
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from logging import Logger
 from typing import Optional
-from urllib.parse import urlparse, parse_qs
 from marzban_api_client import AuthenticatedClient, Client
 from marzban_api_client.api.admin import admin_token
 from marzban_api_client.models.body_admin_token_api_admin_token_post import (
@@ -15,6 +12,7 @@ from marzban_api_client.api.user import (
     add_user,
     get_user,
     modify_user,
+    delete_expired_users,
 )
 from marzban_api_client.models import (
     UserCreate,
@@ -108,12 +106,18 @@ class MarzBanManager:
         response: Response = add_user.sync_detailed(
             client=await self._client.get_client(), body=user_data
         )
-        self._logger.info(f"Create user virtual network: {response.status_code}")
+        self._logger.info(
+            "Created %s virtual network. Status code %s",
+            name_user_virtual_network,
+            response.status_code,
+        )
         if not response:
             return False
         return response.parsed
 
-    async def get_marz_user(self, name_user_virtual_network: str) -> UserResponse:
+    async def get_marz_user_virtual_network(
+        self, name_user_virtual_network: str
+    ) -> UserResponse:
         """
         Получает пользователя виртуальной сети из системы
         :param name_user_virtual_network: Название пользователя виртуальной сети.
@@ -137,6 +141,9 @@ class MarzBanManager:
             client=await self._client.get_client(),
             body=user_data,
         )
+        self._logger.info(
+            "Virtual network '%s' set %s data limit", name_user_virtual_network, value
+        )
         return response.parsed
 
     async def get_user_virtual_network_links(
@@ -147,7 +154,9 @@ class MarzBanManager:
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         :return: Строка содержащая ключи подключения к виртуальной сети.
         """
-        response: UserResponse = await self.get_marz_user(name_user_virtual_network)
+        response: UserResponse = await self.get_marz_user_virtual_network(
+            name_user_virtual_network
+        )
         keys = {}
         for link in response.links:
             key_data = link.split("://")
@@ -160,7 +169,27 @@ class MarzBanManager:
                     keys["trojan"] = link
             elif key_data[0] == "ss":
                 keys["shadowsocks"] = link
+        self._logger.info(
+            "Get '%s' Virtual network links: %s", name_user_virtual_network, keys
+        )
         return keys
+
+    async def delete_user_virtual_network(self, name_user_virtual_network: str) -> None:
+        thirty_days = MarzBanManager.expire_timestamp(
+            datetime.now(timezone.utc) - timedelta(days=10)
+        )
+        user_data = UserModify(expire=thirty_days)
+        await modify_user.asyncio_detailed(
+            name_user_virtual_network,
+            client=await self._client.get_client(),
+            body=user_data,
+        )
+
+        delete_utc_time = datetime.now(timezone.utc) - timedelta(days=9, hours=23)
+        await delete_expired_users.asyncio_detailed(
+            expired_before=delete_utc_time, client=await self._client.get_client()
+        )
+        self._logger.info("Virtual network '%s' deleted", name_user_virtual_network)
 
     @staticmethod
     def expire_timestamp(expire: datetime):
@@ -174,10 +203,33 @@ marzban_manager = MarzBanManager(logger, marzban_client)
 
 
 async def main():
-    data = await marzban_manager.get_user_virtual_network_links(
-        name_user_virtual_network="user_3"
-    )
-    print(data)
+    ...
+    # data = await marzban_manager.get_user_virtual_network_links(
+    #     name_user_virtual_network="zifrit-WwthmMFc"
+    # )
+
+    # expire = datetime.now(timezone.utc) + timedelta(days=1)
+    #
+    # await marzban_manager.create_virtual_network(
+    #     name_user_virtual_network="test_1", expire=expire
+    # )
+    # await marzban_manager.add_traffic_to_marz_user(
+    #     name_user_virtual_network="test_1", value=300
+    # )
+    # await marzban_manager.create_virtual_network(
+    #     name_user_virtual_network="test_2", expire=expire
+    # )
+
+    # expire_1 = datetime.now(timezone.utc) - timedelta(days=2)
+    # expire_2 = datetime.now(timezone.utc) - timedelta(days=6)
+    #
+
+    #
+    # await marzban_manager.add_traffic_to_marz_user(
+    #     name_user_virtual_network="test_2", value=300, expire=expire_2
+    # )
+
+    # await marzban_manager.delete_user_virtual_network("zifrit_2Em7oZsL")
 
 
 if __name__ == "__main__":

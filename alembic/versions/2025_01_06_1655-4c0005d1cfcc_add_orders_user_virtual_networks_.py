@@ -1,8 +1,8 @@
 """add orders, user_virtual_networks, tariffs, countries tables
 
-Revision ID: aa72c8804f3f
+Revision ID: 4c0005d1cfcc
 Revises: f940dde41d8d
-Create Date: 2024-12-31 17:31:49.549363
+Create Date: 2025-01-06 16:55:26.448854
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "aa72c8804f3f"
+revision: str = "4c0005d1cfcc"
 down_revision: Union[str, None] = "f940dde41d8d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -122,7 +122,7 @@ def upgrade() -> None:
             nullable=False,
             comment="Тип виртуальной сети",
         ),
-        sa.Column("virtual_networks", sa.String(length=255), nullable=False),
+        sa.Column("virtual_networks", sa.Text(), nullable=False),
         sa.Column("expire", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "traffic_limit",
@@ -138,6 +138,18 @@ def upgrade() -> None:
             comment="Сколько гб пользователь уже израсходовал",
         ),
         sa.Column("tg_user_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "notified_low_traffic_data",
+            sa.Boolean(),
+            server_default="false",
+            nullable=False,
+        ),
+        sa.Column(
+            "notified_expired_soon",
+            sa.Boolean(),
+            server_default="false",
+            nullable=False,
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -161,6 +173,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "orders",
+        sa.Column("virtual_network_key", sa.String(length=255), nullable=True),
         sa.Column("tariff_id", sa.Integer(), nullable=False),
         sa.Column("amount", sa.Integer(), nullable=False, comment="Сумма"),
         sa.Column("tg_user_id", sa.Integer(), nullable=False),

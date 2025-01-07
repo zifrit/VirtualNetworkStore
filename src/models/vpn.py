@@ -3,7 +3,7 @@ import enum
 from datetime import datetime
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Enum, Integer
+from sqlalchemy import String, ForeignKey, DateTime, Enum, Integer, Text, Boolean
 
 if typing.TYPE_CHECKING:
     from src.models.user import TgUser
@@ -33,7 +33,7 @@ class UserVirtualNetworks(IdCUDMixin):
         Enum(TypeVirtualNetwork, name="type_user_virtual_networks"),
         comment="Тип виртуальной сети",
     )
-    virtual_networks: Mapped[str] = mapped_column(String(255))
+    virtual_networks: Mapped[str] = mapped_column(Text())
     expire: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     traffic_limit: Mapped[int] = mapped_column(
         comment="Объем разрешённого трафика", default=200, server_default="200"
@@ -43,6 +43,13 @@ class UserVirtualNetworks(IdCUDMixin):
     )
     tg_user_id: Mapped[int] = mapped_column(ForeignKey("tg_users.id"))
     tg_user: Mapped["TgUser"] = relationship(back_populates="user_virtual_networks")
+
+    notified_low_traffic_data: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default="false"
+    )
+    notified_expired_soon: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default="false"
+    )
 
     repr_columns = ["id", "virtual_network_key"]
 

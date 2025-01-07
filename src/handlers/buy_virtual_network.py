@@ -148,7 +148,7 @@ async def user_approve_buy_virtual_network(
 Реквизиты для оплаты.
 Номер телефона: 89634008750 (Сбербанк)
 
-После оплаты в чате будет выслан vpn ключ.
+После оплаты в чате будет выслан ключ виртуальной сети.
             """
     )
     for admin in bot_settings.ADMINS:
@@ -156,7 +156,7 @@ async def user_approve_buy_virtual_network(
             chat_id=admin,
             text=f""" 
 Пользователь {call.from_user.username}
-сделал заказан на впн.
+сделал заказан на покупки виртуальной сети.
 
 Информация о заказе:
 Страна - {data['country']}
@@ -189,7 +189,7 @@ async def user_cancel_buy_virtual_network(
 
 
 @router.callback_query(F.data.startswith("admin_approve_buy_virtual_network"))
-async def payment_receipt(
+async def admin_approve_buy_virtual_network(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     """Обработчик, который срабатывает когда админ подтвердил приход средств оплаты после чего в чат покупателя приходит ключ виртуальной сети"""
@@ -202,7 +202,8 @@ async def payment_receipt(
     user_id = call.data.split("-")[-2]
     user = await user_manager.get_by_tg_id(session=db_session, id_=user_id)
 
-    virtual_network_key = f"{call.from_user.username}-{generate_random_string()}"
+    virtual_network_key = f"{call.from_user.username}_{generate_random_string()}"
+    order.virtual_network_key = virtual_network_key
     expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
 
     await marzban_manager.create_virtual_network(
@@ -251,7 +252,7 @@ async def payment_receipt(
 
 
 @router.callback_query(F.data.startswith("admin_cancel_buy_virtual_network"))
-async def payment_receipt(
+async def admin_cancel_buy_virtual_network(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     """Обработчик, который срабатывает когда админ отклонил запрос так как оплата не пришла"""

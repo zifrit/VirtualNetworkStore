@@ -5,7 +5,7 @@ from aiogram import types
 from src.core.settings import bot, dp, bot_settings
 from src.core.logger import LOGGING
 from src.utils.middleware import DatabaseMiddleware
-from src.handlers import start, account, buy_virtual_network
+from src.handlers import start, account, buy_virtual_network, user_virtual_network
 
 loger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(account.router)
     dp.include_router(buy_virtual_network.router)
+    dp.include_router(user_virtual_network.router)
 
     # регистрация мидлварей
     dp.update.middleware.register(DatabaseMiddleware())

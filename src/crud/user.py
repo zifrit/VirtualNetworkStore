@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import selectinload
 from src.models.user import TgUser, Referral
+from src.models.vpn import UserVirtualNetworks
 from src.crud.base import BaseManager
 from src.schemas.user import CreateReferralSchema
 
@@ -13,6 +14,31 @@ class UserManager(BaseManager[TgUser]):
     ) -> TgUser:
         result = await session.scalar(
             select(self._model).where(
+                self._model.tg_id == id_,
+                self._model.deleted_at.is_(None),
+            )
+        )
+        return result
+
+    async def get_user_virtual_network(
+        self,
+        session: AsyncSession,
+        id_: int,
+        *args,
+        **kwargs,
+    ) -> TgUser:
+        result = await session.scalar(
+            select(self._model)
+            .options(
+                selectinload(
+                    TgUser.user_virtual_networks.and_(
+                        UserVirtualNetworks.deleted_at.is_(None)
+                    )
+                ).load_only(
+                    UserVirtualNetworks.id, UserVirtualNetworks.virtual_network_key
+                )
+            )
+            .where(
                 self._model.tg_id == id_,
                 self._model.deleted_at.is_(None),
             )
