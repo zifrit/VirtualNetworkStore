@@ -26,6 +26,7 @@ from src.core.settings import marzban_settings
 
 
 logger = logging.getLogger(__name__)
+admin_logger = logging.getLogger("admin_log")
 
 
 class MarzBanClient:
@@ -125,6 +126,11 @@ class MarzBanManager:
         response: Response = await get_user.asyncio_detailed(
             name_user_virtual_network, client=await self._client.get_client()
         )
+        self._logger.info(
+            "Get '%s' virtual network data. Status code %s",
+            name_user_virtual_network,
+            response.status_code,
+        )
         return response.parsed
 
     async def add_traffic_to_marz_user(
@@ -169,7 +175,7 @@ class MarzBanManager:
             body=user_data,
         )
         self._logger.info(
-            "Virtual network '%s' sent new expire %s ",
+            "Virtual network '%s' extended expire to %s ",
             name_user_virtual_network,
             old_expire + timedelta(**extend_date_by),
         )
@@ -228,7 +234,7 @@ class MarzBanManager:
 
 
 marzban_client = MarzBanClient(marzban_settings.URL, logger=logger)
-marzban_manager = MarzBanManager(logger, marzban_client)
+marzban_manager = MarzBanManager(admin_logger, marzban_client)
 
 
 async def main():

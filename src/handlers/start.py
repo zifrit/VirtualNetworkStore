@@ -10,7 +10,7 @@ from src.schemas.user import CreateTgUserSchema, CreateReferralSchema
 from src.kbs import user as kbs_user
 
 
-loger = logging.getLogger(__name__)
+loger = logging.getLogger("admin_log")
 
 
 router = Router()
@@ -23,7 +23,6 @@ async def start_handler(
     """Стартовая обработчик который приветствует, создает пользователя и проверяет рефералку"""
     if await check_subscription(message.from_user.id, message.bot):
         if not await user_manager.get_by_tg_id(db_session, message.from_user.id):
-            loger.warning("пользователя еще нет")
             create_user = CreateTgUserSchema(
                 username=message.from_user.username,
                 tg_id=message.from_user.id,
@@ -32,7 +31,13 @@ async def start_handler(
                 db_session,
                 obj_schema=create_user,
             )
+            loger.info("Пользователь %s был создан базе данных", message.from_user.id)
         if command.args is not None:
+            loger.info(
+                "Пользователь %s перешел по ссылке %s к боту",
+                message.from_user.id,
+                int(decode_payload(command.args)),
+            )
             if message.from_user.id != int(decode_payload(command.args)):
                 create_referral = CreateReferralSchema(
                     referrer_tg_id=message.from_user.id,

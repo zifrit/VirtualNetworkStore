@@ -14,6 +14,10 @@ log_dir = os.path.join(BASE_DIR, "logs")
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
+admin_log_dir = os.path.join(BASE_DIR, "admin_logs")
+if not os.path.exists(admin_log_dir):
+    os.makedirs(admin_log_dir)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -56,6 +60,16 @@ LOGGING = {
             "maxBytes": 50000,
             "encoding": "utf-8",
         },
+        "admin_logs_filehandler": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "verbose",
+            "filename": os.path.join(BASE_DIR, "admin_logs", "logs.log"),
+            "mode": "a",
+            "backupCount": 3,
+            "maxBytes": 50000,
+            "encoding": "utf-8",
+        },
     },
     "loggers": {
         "": {
@@ -67,6 +81,11 @@ LOGGING = {
         },
         "uvicorn.access": {
             "handlers": ["access", "filehandler"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "admin_log": {
+            "handlers": ["access", "admin_logs_filehandler"],
             "level": "INFO",
             "propagate": False,
         },

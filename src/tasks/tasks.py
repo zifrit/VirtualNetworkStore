@@ -11,7 +11,7 @@ from src.marzban.client import marzban_manager
 from src.core.settings import bot
 import asyncio
 
-loger = logging.getLogger(__name__)
+loger = logging.getLogger("admin_log")
 
 
 async def check_user_virtual_network_traffic():
@@ -37,13 +37,22 @@ async def check_user_virtual_network_traffic():
                     text="У вас закончился трафика, советую вас пополнить количество гигабайт",
                 )
                 user_virtual_network.notified_traffic_data_done = True
-
+                loger.info(
+                    "У пользователя %s у ключа %s скоро закончится трафик",
+                    user_virtual_network.tg_user.tg_id,
+                    user_virtual_network.virtual_network_key,
+                )
             elif virtual_network.data_limit - virtual_network.used_traffic < 5:
                 await bot.send_message(
                     chat_id=user_virtual_network.tg_user.tg_id,
                     text="У вас скоро закончится количество трафика, советую вас пополнить количество гигабайт",
                 )
                 user_virtual_network.notified_low_traffic_data = True
+                loger.info(
+                    "У пользователя %s у ключа %s закончился трафик",
+                    user_virtual_network.tg_user.tg_id,
+                    user_virtual_network.virtual_network_key,
+                )
         await session.commit()
 
 
