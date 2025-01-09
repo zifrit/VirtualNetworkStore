@@ -1,8 +1,8 @@
 """add orders, user_virtual_networks, tariffs, countries tables
 
-Revision ID: 4c0005d1cfcc
+Revision ID: 4f7ee076b8fb
 Revises: f940dde41d8d
-Create Date: 2025-01-06 16:55:26.448854
+Create Date: 2025-01-09 00:04:47.570586
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "4c0005d1cfcc"
+revision: str = "4f7ee076b8fb"
 down_revision: Union[str, None] = "f940dde41d8d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -145,7 +145,19 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
+            "notified_traffic_data_done",
+            sa.Boolean(),
+            server_default="false",
+            nullable=False,
+        ),
+        sa.Column(
             "notified_expired_soon",
+            sa.Boolean(),
+            server_default="false",
+            nullable=False,
+        ),
+        sa.Column(
+            "notified_expired_done",
             sa.Boolean(),
             server_default="false",
             nullable=False,

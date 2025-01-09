@@ -47,7 +47,13 @@ class UserVirtualNetworks(IdCUDMixin):
     notified_low_traffic_data: Mapped[bool] = mapped_column(
         Boolean(), default=False, server_default="false"
     )
+    notified_traffic_data_done: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default="false"
+    )
     notified_expired_soon: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default="false"
+    )
+    notified_expired_done: Mapped[bool] = mapped_column(
         Boolean(), default=False, server_default="false"
     )
 

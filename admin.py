@@ -32,6 +32,7 @@ class VPNAdmin(ModelView, model=UserVirtualNetworks):
         UserVirtualNetworks.id,
         UserVirtualNetworks.virtual_network_key,
         UserVirtualNetworks.type_virtual_networks,
+        UserVirtualNetworks.deleted_at,
     ]
 
 

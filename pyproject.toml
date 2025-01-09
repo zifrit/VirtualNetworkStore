@@ -16,6 +16,8 @@ uvicorn = "^0.34.0"
 sqladmin = "^0.20.1"
 fastapi = "^0.115.6"
 marzban-api-client = "^0.4.9"
+redis = "^5.2.1"
+celery = "^5.4.0"
 
 
 [build-system]

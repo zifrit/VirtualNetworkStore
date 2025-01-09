@@ -146,6 +146,35 @@ class MarzBanManager:
         )
         return response.parsed
 
+    async def extend_expire_to_marz_user(
+        self, name_user_virtual_network: str, extend_date_by: dict[str, str]
+    ) -> Response:
+        """
+        Расширяет срок жизни пользователя виртуальной сети
+        :param name_user_virtual_network:  Название пользователя виртуальной сети.
+        :param extend_date_by: На сколько расширится срок жизни виртуальной сети
+        """
+        user_virtual_network = await self.get_marz_user_virtual_network(
+            name_user_virtual_network=name_user_virtual_network
+        )
+        old_expire = datetime.fromtimestamp(user_virtual_network.expire)
+
+        new_expire = MarzBanManager.expire_timestamp(
+            old_expire + timedelta(**extend_date_by)
+        )
+        user_data = UserModify(expire=new_expire)
+        response: Response = await modify_user.asyncio_detailed(
+            name_user_virtual_network,
+            client=await self._client.get_client(),
+            body=user_data,
+        )
+        self._logger.info(
+            "Virtual network '%s' sent new expire %s ",
+            name_user_virtual_network,
+            old_expire + timedelta(**extend_date_by),
+        )
+        return response.parsed
+
     async def get_user_virtual_network_links(
         self, name_user_virtual_network: str
     ) -> dict[str, str]:

@@ -17,6 +17,11 @@ class Database(BaseSettings):
     database_url_asyncpg: str = "sqlite+aiosqlite:///db.sqlite3"
 
 
+class RedisSettings(BaseSettings):
+    host: str = "localhost"
+    port: int = 6379
+
+
 class MarzbanSettings(BaseSettings):
     URL: str = "http://127.0.0.1:8111"
     USERNAME: str = "admin"
@@ -25,6 +30,7 @@ class MarzbanSettings(BaseSettings):
 
 db_settings = Database()
 bot_settings = Settings()
+redis_settings = RedisSettings()
 marzban_settings = MarzbanSettings()
 
 bot = Bot(
