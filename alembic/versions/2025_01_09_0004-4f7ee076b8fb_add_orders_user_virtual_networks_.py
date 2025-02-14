@@ -45,9 +45,7 @@ def upgrade() -> None:
     op.create_table(
         "tariffs",
         sa.Column("view_price", sa.String(length=255), nullable=False),
-        sa.Column(
-            "term", sa.Integer(), nullable=False, comment="Количество времени"
-        ),
+        sa.Column("term", sa.Integer(), nullable=False, comment="Количество времени"),
         sa.Column(
             "billing_period",
             sa.Enum("day", "month", "year", name="billing_period"),
@@ -75,9 +73,7 @@ def upgrade() -> None:
             comment="Объем разрешённого трафика",
         ),
         sa.Column("country_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "is_active", sa.Boolean(), nullable=False, comment="Статус тарифа"
-        ),
+        sa.Column("is_active", sa.Boolean(), nullable=False, comment="Статус тарифа"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -101,9 +97,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "user_virtual_networks",
-        sa.Column(
-            "virtual_network_key", sa.String(length=255), nullable=False
-        ),
+        sa.Column("virtual_network_key", sa.String(length=255), nullable=False),
         sa.Column(
             "status",
             sa.Enum("active", "inactive", name="status_user_virtual_networks"),
@@ -209,7 +203,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "type",
-            sa.Enum("buy", "refill", name="order_type"),
+            sa.Enum("buy", "refill_traffic", "refill_traffic", name="order_type"),
             nullable=False,
             comment="Тип заказа",
         ),

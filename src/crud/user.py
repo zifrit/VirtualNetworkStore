@@ -65,8 +65,8 @@ class ReferralManager(BaseManager[Referral]):
         )
         if not is_referral:
             referral = Referral(
-                referred_user_id=obj_schema.referred_user,
-                referrer_id=obj_schema.referrer_user,
+                referred_user_id=obj_schema.referred_tg_id,
+                referrer_id=obj_schema.referrer_tg_id,
             )
             session.add(referral)
             await session.commit()

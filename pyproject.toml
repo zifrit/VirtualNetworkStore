@@ -18,6 +18,7 @@ fastapi = "^0.115.6"
 marzban-api-client = "^0.4.9"
 redis = "^5.2.1"
 celery = "^5.4.0"
+apscheduler = "^3.11.0"
 
 
 [build-system]

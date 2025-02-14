@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from sqladmin import Admin, ModelView
 
 from src.core.db_connections import db_session
-from src.models.user import TgUser
+from src.models.user import TgUser, Referral
 from src.models.vpn import UserVirtualNetworks, Country, Tariff
 from src.models.order import Order
 import uvicorn
@@ -23,6 +23,13 @@ class UserAdmin(ModelView, model=TgUser):
     name_plural = "Users"
     column_list = [TgUser.tg_id, TgUser.username]
     column_details_list = [TgUser.tg_id, TgUser.username]
+
+
+class ReferralAdmin(ModelView, model=Referral):
+    name = "Referral"
+    name_plural = "Referrals"
+    # column_list = [TgUser.tg_id, TgUser.username]
+    # column_details_list = [TgUser.tg_id, TgUser.username]
 
 
 class VPNAdmin(ModelView, model=UserVirtualNetworks):
@@ -55,6 +62,7 @@ class OrdersAdmin(ModelView, model=Order):
 
 
 admin.add_view(UserAdmin)
+admin.add_view(ReferralAdmin)
 admin.add_view(VPNAdmin)
 admin.add_view(PriceAdmin)
 admin.add_view(UserVPNAdmin)

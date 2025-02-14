@@ -64,7 +64,7 @@ async def start_handler(
             reply_markup=kbs_user.start_inline_button,
         )
     else:
-        await message.answer("Вы не подписались на канал !!")
+        await message.answer("Вы не подписались на канал https://t.me/shmel_x!!")
 
 
 @router.callback_query(F.data == "back_to_start_menu")

@@ -21,7 +21,7 @@ class OrderManager(BaseManager[Order]):
         )
         return result
 
-    async def get_by_virtual_network_key_with_tariff(
+    async def get_first_order_by_virtual_network_key_with_tariff(
         self, session: AsyncSession, virtual_network_key: int, *args, **kwargs
     ) -> Order:
         result = await session.scalar(

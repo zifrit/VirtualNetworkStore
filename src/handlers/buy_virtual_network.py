@@ -202,7 +202,7 @@ async def admin_approve_buy_virtual_network(
     user_id = call.data.split("-")[-2]
     user = await user_manager.get_by_tg_id(session=db_session, id_=user_id)
 
-    virtual_network_key = f"{call.from_user.username}_{generate_random_string()}"
+    virtual_network_key = f"{user.username}_{generate_random_string()}"
     order.virtual_network_key = virtual_network_key
     expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
 

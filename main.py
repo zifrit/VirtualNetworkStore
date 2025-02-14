@@ -5,7 +5,14 @@ from aiogram import types
 from src.core.settings import bot, dp, bot_settings
 from src.core.logger import LOGGING
 from src.utils.middleware import DatabaseMiddleware
-from src.handlers import start, account, buy_virtual_network, user_virtual_network
+from src.handlers import (
+    start,
+    account,
+    buy_virtual_network,
+    user_virtual_network,
+    referral,
+)
+from src.tasks.schedule import scheduler
 
 loger = logging.getLogger(__name__)
 
@@ -18,8 +25,10 @@ commands = [
 async def start_bot():
     for admin_id in bot_settings.ADMINS:
         try:
+            # scheduler.start()
             await bot.send_message(admin_id, f"Бот запущен")
         except:
+            # scheduler.shutdown()
             pass
     loger.info("Бот успешно запущен.")
 
@@ -29,6 +38,7 @@ async def stop_bot():
     try:
         for admin_id in bot_settings.ADMINS:
             await bot.send_message(admin_id, "Бот остановлен")
+        # scheduler.shutdown()
     except:
         pass
     loger.error("Бот остановлен!")
@@ -38,6 +48,7 @@ async def main():
     # регистрация роутов
     dp.include_router(start.router)
     dp.include_router(account.router)
+    # dp.include_router(referral.router)
     dp.include_router(buy_virtual_network.router)
     dp.include_router(user_virtual_network.router)
 

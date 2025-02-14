@@ -19,7 +19,8 @@ class OrderStatus(enum.Enum):
 
 class OrderType(enum.Enum):
     buy = "buy"  # покупка
-    refill = "refill"  # пополнение
+    refill_traffic = "refill_traffic"  # пополнение трафика
+    refill_expire = "refill_expire"  # пополнение срока жизни
 
 
 class Order(IdCUDMixin):

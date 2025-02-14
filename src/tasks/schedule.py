@@ -1,6 +1,9 @@
-CELERY_BEAT_SCHEDULE = {
-    "add-every-30-seconds": {
-        "task": "src.tasks.tasks.task_check_user_virtual_network_expired",  # Путь к задаче
-        "schedule": 10,  # Каждые 30 секунд
-    },
-}
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from src.tasks.tasks import check_user_virtual_network_expired
+
+scheduler = AsyncIOScheduler()
+scheduler.add_job(
+    func=check_user_virtual_network_expired,
+    trigger=IntervalTrigger(seconds=10),
+)
