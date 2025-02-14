@@ -3,7 +3,8 @@ import enum
 from datetime import datetime
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Enum, Integer, Text, Boolean
+from sqlalchemy import String, ForeignKey, DateTime, Integer, Text, Boolean
+from sqlalchemy.dialects.postgresql import ENUM
 
 if typing.TYPE_CHECKING:
     from src.models.user import TgUser
@@ -26,11 +27,11 @@ class UserVirtualNetworks(IdCUDMixin):
     __tablename__ = "user_virtual_networks"
     virtual_network_key: Mapped[str] = mapped_column(String(255), unique=True)
     status: Mapped[StatusVirtualNetwork] = mapped_column(
-        Enum(StatusVirtualNetwork, name="status_user_virtual_networks"),
+        ENUM(StatusVirtualNetwork, name="status_user_virtual_networks"),
         comment="Состояние купленного виртуальной сети",
     )
     type_virtual_networks: Mapped[TypeVirtualNetwork] = mapped_column(
-        Enum(TypeVirtualNetwork, name="type_user_virtual_networks"),
+        ENUM(TypeVirtualNetwork, name="type_user_virtual_networks"),
         comment="Тип виртуальной сети",
     )
     virtual_networks: Mapped[str] = mapped_column(Text())
@@ -88,12 +89,12 @@ class Tariff(IdCUDMixin):
     view_price: Mapped[str] = mapped_column(String(255))
     term: Mapped[int] = mapped_column(comment="Количество времени")
     billing_period: Mapped[BillingPeriod] = mapped_column(
-        Enum(BillingPeriod, name="billing_period"),
+        ENUM(BillingPeriod, name="billing_period"),
         comment="Период времени",
     )
     price: Mapped[int] = mapped_column(comment="Цена")
     currency: Mapped[Currency] = mapped_column(
-        Enum(Currency, name="price_currency"),
+        ENUM(Currency, name="price_currency"),
         comment="Валюта",
     )
     tariff_key: Mapped[str | None] = mapped_column(

@@ -1,8 +1,8 @@
 """add orders, user_virtual_networks, tariffs, countries tables
 
-Revision ID: 4f7ee076b8fb
+Revision ID: 904587f57543
 Revises: f940dde41d8d
-Create Date: 2025-01-09 00:04:47.570586
+Create Date: 2025-02-14 15:49:50.936192
 
 """
 
@@ -10,13 +10,38 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "4f7ee076b8fb"
+revision: str = "904587f57543"
 down_revision: Union[str, None] = "f940dde41d8d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+
+
+billing_period_enum = postgresql.ENUM("day", "month", "year", name="billing_period")
+price_currency_enum = postgresql.ENUM("dollars", "euro", "ruble", name="price_currency")
+status_user_virtual_networks_enum = postgresql.ENUM(
+    "active", "inactive", name="status_user_virtual_networks"
+)
+type_user_virtual_networks_enum = postgresql.ENUM(
+    "vmess",
+    "vless",
+    "trojan",
+    "shadowsocks",
+    name="type_user_virtual_networks",
+)
+currency_enum = postgresql.ENUM("dollars", "euro", "ruble", name="currency")
+order_status_enum = postgresql.ENUM(
+    "completed",
+    "failed",
+    "in_progress",
+    "start",
+    name="order_status",
+)
+order_type_enum = postgresql.ENUM(
+    "buy", "refill_traffic", "refill_expire", name="order_type"
+)
 
 
 def upgrade() -> None:
@@ -28,13 +53,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -48,14 +73,14 @@ def upgrade() -> None:
         sa.Column("term", sa.Integer(), nullable=False, comment="Количество времени"),
         sa.Column(
             "billing_period",
-            sa.Enum("day", "month", "year", name="billing_period"),
+            billing_period_enum,
             nullable=False,
             comment="Период времени",
         ),
         sa.Column("price", sa.Integer(), nullable=False, comment="Цена"),
         sa.Column(
             "currency",
-            sa.Enum("dollars", "euro", "ruble", name="price_currency"),
+            price_currency_enum,
             nullable=False,
             comment="Валюта",
         ),
@@ -77,13 +102,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -100,19 +125,13 @@ def upgrade() -> None:
         sa.Column("virtual_network_key", sa.String(length=255), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("active", "inactive", name="status_user_virtual_networks"),
+            status_user_virtual_networks_enum,
             nullable=False,
             comment="Состояние купленного виртуальной сети",
         ),
         sa.Column(
             "type_virtual_networks",
-            sa.Enum(
-                "vmess",
-                "vless",
-                "trojan",
-                "shadowsocks",
-                name="type_user_virtual_networks",
-            ),
+            type_user_virtual_networks_enum,
             nullable=False,
             comment="Тип виртуальной сети",
         ),
@@ -159,13 +178,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -185,38 +204,32 @@ def upgrade() -> None:
         sa.Column("tg_user_id", sa.Integer(), nullable=False),
         sa.Column(
             "currency",
-            sa.Enum("dollars", "euro", "ruble", name="currency"),
+            currency_enum,
             nullable=False,
             comment="Валюта",
         ),
         sa.Column(
             "status",
-            sa.Enum(
-                "completed",
-                "failed",
-                "in_progress",
-                "start",
-                name="order_status",
-            ),
+            order_status_enum,
             nullable=False,
             comment="Статус заказа",
         ),
         sa.Column(
             "type",
-            sa.Enum("buy", "refill_traffic", "refill_traffic", name="order_type"),
+            order_type_enum,
             nullable=False,
             comment="Тип заказа",
         ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -240,4 +253,11 @@ def downgrade() -> None:
     op.drop_table("user_virtual_networks")
     op.drop_table("tariffs")
     op.drop_table("countries")
+    billing_period_enum.drop(op.get_bind(), checkfirst=False)
+    price_currency_enum.drop(op.get_bind(), checkfirst=False)
+    status_user_virtual_networks_enum.drop(op.get_bind(), checkfirst=False)
+    type_user_virtual_networks_enum.drop(op.get_bind(), checkfirst=False)
+    currency_enum.drop(op.get_bind(), checkfirst=False)
+    order_status_enum.drop(op.get_bind(), checkfirst=False)
+    order_type_enum.drop(op.get_bind(), checkfirst=False)
     # ### end Alembic commands ###
