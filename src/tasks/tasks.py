@@ -133,3 +133,7 @@ async def check_user_virtual_network_expired():
                     user_virtual_network.virtual_network_key,
                 )
         await session.commit()
+
+
+async def ping_server():
+    await marzban_manager.ping()

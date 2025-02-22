@@ -13,6 +13,8 @@ from marzban_api_client.api.user import (
     get_user,
     modify_user,
     delete_expired_users,
+    reset_user_data_usage,
+    get_users,
 )
 from marzban_api_client.models import (
     UserCreate,
@@ -153,7 +155,7 @@ class MarzBanManager:
         return response.parsed
 
     async def extend_expire_to_marz_user(
-        self, name_user_virtual_network: str, extend_date_by: dict[str, str]
+        self, name_user_virtual_network: str, extend_date_by: int
     ) -> Response:
         """
         Расширяет срок жизни пользователя виртуальной сети
@@ -166,7 +168,7 @@ class MarzBanManager:
         old_expire = datetime.fromtimestamp(user_virtual_network.expire)
 
         new_expire = MarzBanManager.expire_timestamp(
-            old_expire + timedelta(**extend_date_by)
+            old_expire + timedelta(days=extend_date_by)
         )
         user_data = UserModify(expire=new_expire)
         response: Response = await modify_user.asyncio_detailed(
@@ -210,6 +212,11 @@ class MarzBanManager:
         return keys
 
     async def delete_user_virtual_network(self, name_user_virtual_network: str) -> None:
+        """
+        Удаляет виртуальную сеть пользователя, уменьшая его срок жизни на 10 дней после чего удаляю всех у кого больше 10 как истек строк жизни.
+        :param name_user_virtual_network: Название пользователя виртуальной сети.
+        :return: None
+        """
         thirty_days = MarzBanManager.expire_timestamp(
             datetime.now(timezone.utc) - timedelta(days=10)
         )
@@ -225,6 +232,37 @@ class MarzBanManager:
             expired_before=delete_utc_time, client=await self._client.get_client()
         )
         self._logger.info("Virtual network '%s' deleted", name_user_virtual_network)
+
+    async def reset_user_virtual_network_data_usage(
+        self, name_user_virtual_network: str
+    ) -> None:
+        """
+        Сбрасывает количество потраченного трафика у виртуальной сети пользователя.
+        :param name_user_virtual_network: Название пользователя виртуальной сети.
+        :return: None
+        """
+
+        await reset_user_data_usage.asyncio_detailed(
+            client=await self._client.get_client(), username=name_user_virtual_network
+        )
+        self._logger.info(
+            "Virtual network '%s' reset traffic data", name_user_virtual_network
+        )
+
+    async def ping(self) -> None:
+        """
+        Делает запрос на получения всех пользователей, сейчас выступает в роли проверки доступа к серверу
+        :return:
+        """
+        response: Response = await get_users.asyncio_detailed(
+            client=await self._client.get_client()
+        )
+        if response.status_code == 200:
+            self._logger.info("Sever is work, code: %s", response.status_code)
+        else:
+            self._logger.error(
+                "Server returned unexpected status code: %s", response.status_code
+            )
 
     @staticmethod
     def expire_timestamp(expire: datetime):

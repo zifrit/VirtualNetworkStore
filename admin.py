@@ -4,7 +4,7 @@ from sqladmin import Admin, ModelView
 
 from src.core.db_connections import db_session
 from src.models.user import TgUser, Referral
-from src.models.vpn import UserVirtualNetworks, Country, Tariff
+from src.models.vpn import UserVirtualNetworks, Tariff
 from src.models.order import Order
 import uvicorn
 
@@ -43,12 +43,6 @@ class VPNAdmin(ModelView, model=UserVirtualNetworks):
     ]
 
 
-class PriceAdmin(ModelView, model=Country):
-    name = "Country"
-    name_plural = "Countries"
-    column_list = [Country.id, Country.key_country, Country.view_country]
-
-
 class UserVPNAdmin(ModelView, model=Tariff):
     name = "Tariff"
     name_plural = "Tariffs"
@@ -64,7 +58,6 @@ class OrdersAdmin(ModelView, model=Order):
 admin.add_view(UserAdmin)
 admin.add_view(ReferralAdmin)
 admin.add_view(VPNAdmin)
-admin.add_view(PriceAdmin)
 admin.add_view(UserVPNAdmin)
 admin.add_view(OrdersAdmin)
 

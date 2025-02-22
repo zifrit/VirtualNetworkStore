@@ -61,17 +61,6 @@ class UserVirtualNetworks(IdCUDMixin):
     repr_columns = ["id", "virtual_network_key"]
 
 
-class Country(IdCUDMixin):
-    __tablename__ = "countries"
-    view_country: Mapped[str] = mapped_column(String(255))
-    key_country: Mapped[str] = mapped_column(String(255), unique=True)
-    tariffs: Mapped[list["Tariff"]] = relationship(
-        back_populates="country",
-    )
-
-    repr_columns = ["id", "view_country"]
-
-
 class BillingPeriod(enum.Enum):
     day = "day"
     month = "month"
@@ -87,25 +76,29 @@ class Currency(enum.Enum):
 class Tariff(IdCUDMixin):
     __tablename__ = "tariffs"
     view_price: Mapped[str] = mapped_column(String(255))
-    term: Mapped[int] = mapped_column(comment="Количество времени")
+    term: Mapped[int] = mapped_column(
+        comment="Количество времени", default=1,
+    )
     billing_period: Mapped[BillingPeriod] = mapped_column(
         ENUM(BillingPeriod, name="billing_period"),
         comment="Период времени",
+        default=BillingPeriod.month,
     )
     price: Mapped[int] = mapped_column(comment="Цена")
     currency: Mapped[Currency] = mapped_column(
         ENUM(Currency, name="price_currency"),
         comment="Валюта",
-    )
-    tariff_key: Mapped[str | None] = mapped_column(
-        String(255), comment="Ключ для тарифа", unique=True
+        default=Currency.ruble,
     )
     traffic_limit: Mapped[int] = mapped_column(
-        comment="Объем разрешённого трафика", default=200, server_default="200"
+        comment="Объем разрешённого трафика", default=200,
     )
-    country_id: Mapped[int] = mapped_column(ForeignKey("countries.id"))
-    is_active: Mapped[bool] = mapped_column(comment="Статус тарифа")
-    country: Mapped["Country"] = relationship(back_populates="tariffs")
+    is_active: Mapped[bool] = mapped_column(
+        comment="Статус тарифа", default=False,
+    )
+    is_archive: Mapped[bool] = mapped_column(
+        comment="в архиве", default=False,
+    )
     orders: Mapped[list["Order"]] = relationship(back_populates="tariff")
 
     repr_columns = ["id", "view_price"]

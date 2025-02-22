@@ -9,6 +9,7 @@ from src.handlers import (
     start,
     account,
     buy_virtual_network,
+    buy_virtual_network_,
     user_virtual_network,
     referral,
 )
@@ -25,10 +26,10 @@ commands = [
 async def start_bot():
     for admin_id in bot_settings.ADMINS:
         try:
-            # scheduler.start()
+            scheduler.start()
             await bot.send_message(admin_id, f"Бот запущен")
         except:
-            # scheduler.shutdown()
+            scheduler.shutdown()
             pass
     loger.info("Бот успешно запущен.")
 
@@ -38,7 +39,7 @@ async def stop_bot():
     try:
         for admin_id in bot_settings.ADMINS:
             await bot.send_message(admin_id, "Бот остановлен")
-        # scheduler.shutdown()
+        scheduler.shutdown()
     except:
         pass
     loger.error("Бот остановлен!")
@@ -49,8 +50,8 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(account.router)
     # dp.include_router(referral.router)
-    dp.include_router(buy_virtual_network.router)
-    dp.include_router(user_virtual_network.router)
+    # dp.include_router(buy_virtual_network.router)
+    dp.include_router(buy_virtual_network_.router)
 
     # регистрация мидлварей
     dp.update.middleware.register(DatabaseMiddleware())

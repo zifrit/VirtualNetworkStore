@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Tariff, Country, UserVirtualNetworks
+from src.models import Tariff, UserVirtualNetworks
 from src.crud.base import BaseManager
 
 
@@ -37,13 +37,6 @@ class TariffManager(BaseManager[Tariff]):
 
 
 tariff_manager = TariffManager(Tariff)
-
-
-class CountryManager(BaseManager[Country]):
-    pass
-
-
-country_manager = CountryManager(Country)
 
 
 class UserVirtualNetworksManager(BaseManager[UserVirtualNetworks]):
