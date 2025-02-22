@@ -1,6 +1,5 @@
 import datetime
 import logging
-import string
 
 from aiogram import Router, F
 from aiogram.enums import ParseMode
@@ -11,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.settings import bot_settings
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
 from src.crud.virtual_network import (
-    country_manager,
     tariff_manager,
     user_virtual_networks_manager,
 )
@@ -36,41 +34,16 @@ billing_period = {
 }
 
 
-@router.callback_query(F.data.in_(["buy_virtual_network", "back_to_choice_county"]))
-async def choice_virtual_network_county(call: CallbackQuery, db_session: AsyncSession):
-    """Обработчик где выбирают страну"""
-    counties = await country_manager.get_all(db_session)
-    counties_data_list = [
-        {
-            "text": county.view_country,
-            "callback_data": f"{county.key_country}-{county.id}",
-        }
-        for county in counties
-    ]
-    await call.message.edit_text(
-        text="""
-Выберите страну для вашего VPN ⬇️\n
-⚠️ Если вам нужен VPN для соцсетей или торрентов – вернитесь назад и выберите цель использования. Ни в коем случае не используйте просто страновой VPN для скачивания с торрентов!\n
-⛔️ Выбирая страну самостоятельно, мы НЕ гарантируем что ваш инстаграм будет работать в России с российского IP 😄
-        """,
-        reply_markup=kbs_buy_virtual_network.choice_county_inline_buttons_builder(
-            counties_data_list
-        ),
-    )
-
-
-@router.callback_query(F.data.startswith("country-"))
-async def country_price_list(
+@router.callback_query(F.data.in_(["buy_virtual_network"]))
+async def tariff_list_handler(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
-    """Обработчик, который показывает цены каждой страны"""
-    country_id = call.data.split("-")[-1]
-    country = await country_manager.get_by_id(db_session, country_id)
-    tariff_list = await tariff_manager.get_country_tariff(db_session, country_id)
-    data_price_list = [
+    """Обработчик, который показывает все тарифы виртуальных сетей"""
+    tariff_list = await tariff_manager.get_tariffs(db_session)
+    data_tariff_list = [
         {
             "back_text": f"🎟️{tariff.view_price}",
-            "back_callback_data": f"{tariff.tariff_key}",
+            "back_callback_data": f"tariff-{tariff.id}",
         }
         for tariff in tariff_list
     ]
@@ -80,28 +53,26 @@ async def country_price_list(
             for tariff in tariff_list
         ]
     )
-    await state.update_data(country=country.view_country)
     await call.message.edit_text(
         text=f"""
-{country.view_country}
 💰 Лучший VPN по лучшей цене!
 
 {answer_text}
                 """,
-        reply_markup=kbs_buy_virtual_network.choice_country_tariff_inline_buttons_builder(
-            prices=data_price_list
+        reply_markup=kbs_buy_virtual_network.choice_tariffs_inline_buttons_builder(
+            tariffs=data_tariff_list
         ),
     )
 
 
 @router.callback_query(F.data.startswith("tariff-"))
-async def choice_price_county(
-    call: CallbackQuery, state: FSMContext, db_session: AsyncSession
-):
-    """Обработчик, который показывать информацию о выбранной виртуальной услуге, что бы удостоверить выбор. Создается заказ на виртуальную сеть"""
-    data = await state.get_data()
-    tariff_key = call.data
-    tariff = await tariff_manager.get_tariff_by_tariff_key(db_session, tariff_key)
+async def choice_tariff_handler(call: CallbackQuery, db_session: AsyncSession):
+    """
+    Обработчик, который показывать информацию о выбранной виртуальной сети.
+    Создается заказ на виртуальную сеть
+    """
+    tariff_id = call.data.split("-")[-1]
+    tariff = await tariff_manager.get_tariff_by_id(db_session, int(tariff_id))
     tg_user = await user_manager.get_by_tg_id(db_session, id_=call.from_user.id)
 
     order_schema = CreateOrderSchema(
@@ -119,8 +90,7 @@ async def choice_price_county(
 
     await call.message.edit_text(
         text=f"""
-Информация о заказе: 
-Страна - {data['country']}
+Информация о заказе:
 Цена - {order.tariff.view_price}
 Срок - {order.tariff.term} {billing_period[order.tariff.billing_period.value]}
 Ограничение по трафику - {order.tariff.traffic_limit}гб
@@ -134,13 +104,13 @@ async def choice_price_county(
 
 @router.callback_query(F.data.startswith("user_approve_buy_virtual_network"))
 async def user_approve_buy_virtual_network(
-    call: CallbackQuery, state: FSMContext, db_session: AsyncSession
+    call: CallbackQuery, db_session: AsyncSession
 ):
     """Обработчик, который срабатывает когда пользователь согласился с выбранным тарифом. В чат одмина поступит информация о заказа"""
-    data = await state.get_data()
-    await state.clear()
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.in_progress
 
     await call.message.edit_text(
@@ -159,7 +129,6 @@ async def user_approve_buy_virtual_network(
 сделал заказан на покупки виртуальной сети.
 
 Информация о заказе:
-Страна - {data['country']}
 Цена - {order.tariff.view_price}
 Срок - {order.tariff.term} {billing_period[order.tariff.billing_period.value]}
 Ограничение по трафику - {order.tariff.traffic_limit}гб
@@ -178,7 +147,9 @@ async def user_cancel_buy_virtual_network(
     """Обработчик, который срабатывает когда пользователь не согласился с выбранным тарифом. Тогда заказ отменяется"""
     await state.clear()
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.failed
     order.deleted_at = datetime.datetime.now()
 
@@ -196,11 +167,13 @@ async def admin_approve_buy_virtual_network(
     await state.clear()
 
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.completed
 
     user_id = call.data.split("-")[-2]
-    user = await user_manager.get_by_tg_id(session=db_session, id_=user_id)
+    user = await user_manager.get_by_tg_id(session=db_session, id_=int(user_id))
 
     virtual_network_key = f"{user.username}_{generate_random_string()}"
     order.virtual_network_key = virtual_network_key
@@ -259,7 +232,7 @@ async def admin_cancel_buy_virtual_network(
     await state.clear()
 
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id(session=db_session, id_=int(order_id))
     order.status = OrderStatus.failed
     order.deleted_at = datetime.datetime.now()
 

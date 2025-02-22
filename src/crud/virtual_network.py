@@ -7,33 +7,33 @@ from src.crud.base import BaseManager
 
 class TariffManager(BaseManager[Tariff]):
 
-    async def get_country_tariff(
+    async def get_tariffs(
         self,
         session: AsyncSession,
-        country_id: int,
     ) -> list[Tariff]:
-        prices = await session.scalars(
+        tariff = await session.scalars(
             select(self._model).where(
-                self._model.country_id == country_id,
                 self._model.deleted_at.is_(None),
                 self._model.is_active.is_(True),
+                self._model.is_archive.is_(False),
             )
         )
-        return list(prices)
+        return list(tariff)
 
-    async def get_tariff_by_tariff_key(
+    async def get_tariff_by_id(
         self,
         session: AsyncSession,
-        tariff_key: str,
+        tariff_id: str,
     ) -> Tariff:
-        prices = await session.scalar(
+        tariff = await session.scalar(
             select(self._model).where(
-                self._model.tariff_key == tariff_key,
+                self._model.id == tariff_id,
                 self._model.deleted_at.is_(None),
                 self._model.is_active.is_(True),
+                self._model.is_archive.is_(False),
             )
         )
-        return prices
+        return tariff
 
 
 tariff_manager = TariffManager(Tariff)
