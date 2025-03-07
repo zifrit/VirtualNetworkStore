@@ -14,14 +14,14 @@ start_inline_button = InlineKeyboardMarkup(
             ),
         ],
         [
-            InlineKeyboardButton(
-                text="💰Пополнить",
-                callback_data="replenish",
-            ),
-            InlineKeyboardButton(
-                text="⚙️Аккаунт",
-                callback_data="account",
-            ),
+            # InlineKeyboardButton(
+            #     text="💰Пополнить",
+            #     callback_data="replenish",
+            # ),
+            # InlineKeyboardButton(
+            #     text="⚙️Аккаунт",
+            #     callback_data="account",
+            # ),
         ],
         [
             InlineKeyboardButton(
@@ -29,26 +29,26 @@ start_inline_button = InlineKeyboardMarkup(
                 callback_data="about_us",
             ),
             InlineKeyboardButton(
-                text="🆘Помощь",
-                callback_data="user_help",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
                 text="🤝Партнеры",
                 callback_data="partners",
             ),
-            InlineKeyboardButton(
-                text="🧩Наши каналы",
-                callback_data="user_help",
-                url="https://ya.ru/",
-            ),
         ],
         [
             InlineKeyboardButton(
-                text="📎Другие сервисы",
-                callback_data="other_services",
+                text="🆘Помощь",
+                callback_data="user_help",
             ),
+            # InlineKeyboardButton(
+            #     text="🧩Наши каналы",
+            #     callback_data="user_help",
+            #     url="https://ya.ru/",
+            # ),
+        ],
+        [
+            # InlineKeyboardButton(
+            #     text="📎Другие сервисы",
+            #     callback_data="other_services",
+            # ),
         ],
     ],
     resize_keyboard=True,

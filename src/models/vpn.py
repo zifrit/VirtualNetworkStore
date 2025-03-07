@@ -77,7 +77,8 @@ class Tariff(IdCUDMixin):
     __tablename__ = "tariffs"
     view_price: Mapped[str] = mapped_column(String(255))
     term: Mapped[int] = mapped_column(
-        comment="Количество времени", default=1,
+        comment="Количество времени",
+        default=1,
     )
     billing_period: Mapped[BillingPeriod] = mapped_column(
         ENUM(BillingPeriod, name="billing_period"),
@@ -91,13 +92,16 @@ class Tariff(IdCUDMixin):
         default=Currency.ruble,
     )
     traffic_limit: Mapped[int] = mapped_column(
-        comment="Объем разрешённого трафика", default=200,
+        comment="Объем разрешённого трафика",
+        default=200,
     )
     is_active: Mapped[bool] = mapped_column(
-        comment="Статус тарифа", default=False,
+        comment="Статус тарифа",
+        default=False,
     )
     is_archive: Mapped[bool] = mapped_column(
-        comment="в архиве", default=False,
+        comment="в архиве",
+        default=False,
     )
     orders: Mapped[list["Order"]] = relationship(back_populates="tariff")
 

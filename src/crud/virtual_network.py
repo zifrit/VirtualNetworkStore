@@ -20,10 +20,10 @@ class TariffManager(BaseManager[Tariff]):
         )
         return list(tariff)
 
-    async def get_tariff_by_id(
+    async def get_active_tariff_by_id(
         self,
         session: AsyncSession,
-        tariff_id: str,
+        tariff_id: int,
     ) -> Tariff:
         tariff = await session.scalar(
             select(self._model).where(
@@ -51,6 +51,11 @@ class UserVirtualNetworksManager(BaseManager[UserVirtualNetworks]):
             )
         )
         return user_virtual_networks
+
+    async def get_user_virtual_network_by_marzban(
+        self, session: AsyncSession, marz_virtual_network_keys: list[str]
+    ) -> list[UserVirtualNetworks]:
+        pass
 
 
 user_virtual_networks_manager = UserVirtualNetworksManager(UserVirtualNetworks)

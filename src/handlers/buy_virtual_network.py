@@ -72,7 +72,7 @@ async def choice_tariff_handler(call: CallbackQuery, db_session: AsyncSession):
     Создается заказ на виртуальную сеть
     """
     tariff_id = call.data.split("-")[-1]
-    tariff = await tariff_manager.get_tariff_by_id(db_session, int(tariff_id))
+    tariff = await tariff_manager.get_active_tariff_by_id(db_session, int(tariff_id))
     tg_user = await user_manager.get_by_tg_id(db_session, id_=call.from_user.id)
 
     order_schema = CreateOrderSchema(
@@ -179,40 +179,43 @@ async def admin_approve_buy_virtual_network(
     order.virtual_network_key = virtual_network_key
     expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
 
-    await marzban_manager.create_virtual_network(
+    r = await marzban_manager.create_virtual_network(
         name_user_virtual_network=virtual_network_key,
         expire=expire,
         data_limit=order.tariff.traffic_limit,
     )
+    if not r:
+        await call.message.answer(text="Произошла ошибка")
+    else:
 
-    virtual_network = await marzban_manager.get_user_virtual_network_links(
-        name_user_virtual_network=virtual_network_key
-    )
+        virtual_network = await marzban_manager.get_user_virtual_network_links(
+            name_user_virtual_network=virtual_network_key
+        )
 
-    user_virtual_network_schema = CreateUserVirtualNetworkSchema(
-        virtual_network_key=virtual_network_key,
-        status=StatusVirtualNetwork.active,
-        type_virtual_networks=TypeVirtualNetwork.vless,
-        virtual_networks=virtual_network["vless"],
-        expire=expire,
-        traffic_limit=order.tariff.traffic_limit,
-        tg_user_id=user.id,
-    )
-    await user_virtual_networks_manager.create(
-        session=db_session, obj_schema=user_virtual_network_schema
-    )
-    text = f"""
-{call.message.text}
-
+        user_virtual_network_schema = CreateUserVirtualNetworkSchema(
+            virtual_network_key=virtual_network_key,
+            status=StatusVirtualNetwork.active,
+            type_virtual_networks=TypeVirtualNetwork.vless,
+            virtual_networks=virtual_network["vless"],
+            expire=expire,
+            traffic_limit=order.tariff.traffic_limit,
+            tg_user_id=user.id,
+        )
+        await user_virtual_networks_manager.create(
+            session=db_session, obj_schema=user_virtual_network_schema
+        )
+        text = f"""
+    {call.message.text}
+    
 ОПАЛЧЕНО!!!
 """
-    await call.message.edit_text(
-        text=text,
-    )
-    await call.bot.send_message(
-        chat_id=user_id,
-        parse_mode=ParseMode.MARKDOWN,
-        text=f"""
+        await call.message.edit_text(
+            text=text,
+        )
+        await call.bot.send_message(
+            chat_id=user_id,
+            parse_mode=ParseMode.MARKDOWN,
+            text=f"""
 Оплата прошла!!
 
 Вот ваш ключ виртуальной сети:
@@ -220,8 +223,8 @@ async def admin_approve_buy_virtual_network(
 ```
 {virtual_network["vless"]}
 ```
-        """,
-    )
+            """,
+        )
 
 
 @router.callback_query(F.data.startswith("admin_cancel_buy_virtual_network"))

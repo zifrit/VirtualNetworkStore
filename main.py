@@ -9,7 +9,6 @@ from src.handlers import (
     start,
     account,
     buy_virtual_network,
-    buy_virtual_network_,
     user_virtual_network,
     referral,
 )
@@ -50,8 +49,8 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(account.router)
     # dp.include_router(referral.router)
-    # dp.include_router(buy_virtual_network.router)
-    dp.include_router(buy_virtual_network_.router)
+    dp.include_router(user_virtual_network.router)
+    dp.include_router(buy_virtual_network.router)
 
     # регистрация мидлварей
     dp.update.middleware.register(DatabaseMiddleware())

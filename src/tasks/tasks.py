@@ -38,7 +38,9 @@ async def check_user_virtual_network_traffic():
             virtual_network = await marzban_manager.get_marz_user_virtual_network(
                 name_user_virtual_network=user_virtual_network.virtual_network_key
             )
-            if virtual_network.data_limit < virtual_network.used_traffic:
+            if not virtual_network:
+                return
+            elif virtual_network.data_limit < virtual_network.used_traffic:
                 await bot.send_message(
                     chat_id=user_virtual_network.tg_user.tg_id,
                     text="У вас закончился трафика, советую вас пополнить количество гигабайт",
@@ -98,7 +100,8 @@ async def check_user_virtual_network_expired():
             virtual_network = await marzban_manager.get_marz_user_virtual_network(
                 name_user_virtual_network=user_virtual_network.virtual_network_key
             )
-
+            if not virtual_network:
+                return
             date_now = datetime.now()
             virtual_network_expire_date = datetime.fromtimestamp(virtual_network.expire)
             must_more = timedelta(days=1)

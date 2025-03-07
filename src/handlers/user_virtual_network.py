@@ -54,7 +54,7 @@ async def view_user_virtual_networks(call: CallbackQuery, db_session: AsyncSessi
         for virtual_network in user.user_virtual_networks
     ]
     await call.message.edit_text(
-        text="что-то",
+        text="Ключи, которые вы приобрели",
         reply_markup=kbs_user_virtual_network.list_user_virtual_networks_inline_buttons_builder(
             virtual_network_key
         ),
@@ -67,15 +67,10 @@ async def extend_virtual_network_traffic(
 ):
     virtual_network_key = call.data.split("-")[-1]
     await state.update_data(virtual_network_key=virtual_network_key)
-    order = await order_manager.get_first_order_by_virtual_network_key_with_tariff(
-        session=db_session, virtual_network_key=virtual_network_key
-    )
-    tariffs = await tariff_manager.get_country_tariff(
-        session=db_session, country_id=order.tariff.country_id
-    )
+    tariffs = await tariff_manager.get_tariffs(session=db_session)
     tariff_keys = [
         {
-            "tariff_key": tariff.tariff_key,
+            "tariff_key": tariff.id,
             "traffic_limit": tariff.traffic_limit,
         }
         for tariff in tariffs
@@ -93,9 +88,9 @@ async def add_traffic_to_user_virtual_network(
     call: CallbackQuery, db_session: AsyncSession, state: FSMContext
 ):
     data = await state.get_data()
-    tariff_key = call.data[12:]
-    tariff = await tariff_manager.get_tariff_by_tariff_key(
-        session=db_session, tariff_key=tariff_key
+    tariff_id = call.data.split("-")[-1]
+    tariff = await tariff_manager.get_active_tariff_by_id(
+        session=db_session, tariff_id=int(tariff_id)
     )
     tg_user = await user_manager.get_by_tg_id(db_session, id_=call.from_user.id)
 
@@ -130,8 +125,10 @@ async def add_traffic_to_user_virtual_network(
 async def user_approve_extend_virtual_network_traffic(
     call: CallbackQuery, db_session: AsyncSession
 ):
-    order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    _, _, order_id = call.data.split("-")
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.in_progress
 
     await call.message.edit_text(
@@ -165,8 +162,10 @@ async def user_cancel_extend_virtual_network_traffic(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     await state.clear()
-    order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    _, _, order_id = call.data.split("-")
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.failed
     order.deleted_at = datetime.now()
 
@@ -184,9 +183,7 @@ async def user_cancel_extend_virtual_network_traffic(
 async def admin_approve_extend_virtual_network_traffic(
     call: CallbackQuery, db_session: AsyncSession
 ):
-
-    order_id = call.data.split("-")[-1]
-    user_id = call.data.split("-")[-2]
+    _, user_id, order_id = call.data.split("-")
 
     order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
     order.status = OrderStatus.completed
@@ -196,10 +193,14 @@ async def admin_approve_extend_virtual_network_traffic(
         virtual_network_key=order.virtual_network_key,
     )
     user_virtual_network.traffic_limit += order.tariff.traffic_limit
-    await marzban_manager.add_traffic_to_marz_user(
+    r = await marzban_manager.update_traffic_to_marz_user(
         name_user_virtual_network=user_virtual_network.virtual_network_key,
         value=user_virtual_network.traffic_limit,
     )
+    if not r:
+        await call.message.answer(text="Произошла ошибка")
+    user_virtual_network.notified_low_traffic_data = False
+    user_virtual_network.notified_traffic_data_done = False
 
     await call.message.edit_text(
         text=f"""
@@ -222,8 +223,8 @@ async def admin_cancel_extend_virtual_network_traffic(
     call: CallbackQuery, db_session: AsyncSession
 ):
 
-    order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id(session=db_session, id_=order_id)
+    _, _, order_id = call.data.split("-")
+    order = await order_manager.get_by_id(session=db_session, id_=int(order_id))
     order.status = OrderStatus.failed
     order.deleted_at = datetime.now()
 
@@ -270,15 +271,10 @@ async def extend_virtual_network_traffic(
 ):
     virtual_network_key = call.data.split("-")[-1]
     await state.update_data(virtual_network_key=virtual_network_key)
-    order = await order_manager.get_first_order_by_virtual_network_key_with_tariff(
-        session=db_session, virtual_network_key=virtual_network_key
-    )
-    tariffs = await tariff_manager.get_country_tariff(
-        session=db_session, country_id=order.tariff.country_id
-    )
+    tariffs = await tariff_manager.get_tariffs(session=db_session)
     tariff_keys = [
         {
-            "tariff_key": f"add_time_to_expire-{tariff.tariff_key}",
+            "tariff_key": f"add_time_to_expire-{tariff.id}",
             "traffic_limit": f"{tariff.term} {billing_period[tariff.billing_period.value]}",
         }
         for tariff in tariffs
@@ -308,10 +304,13 @@ async def add_traffic_to_user_virtual_network(
     call: CallbackQuery, db_session: AsyncSession, state: FSMContext
 ):
     data = await state.get_data()
-    tariff_key = call.data[19:]
-    tariff = await tariff_manager.get_tariff_by_tariff_key(
-        session=db_session, tariff_key=tariff_key
+    _, tariff_id = call.data.split("-")
+    tariff = await tariff_manager.get_active_tariff_by_id(
+        session=db_session, tariff_id=int(tariff_id)
     )
+    print(tariff)
+    await call.message.answer("asdaws")
+
     tg_user = await user_manager.get_by_tg_id(db_session, id_=call.from_user.id)
 
     order_schema = CreateOrderSchema(
@@ -330,7 +329,7 @@ async def add_traffic_to_user_virtual_network(
     await state.clear()
     await call.message.edit_text(
         text=f"""
-Информация о заказе: 
+Информация о заказе:
 Цена - {order.tariff.view_price}
 На сколько продлить срок жизни токена- {order.tariff.term} {billing_period[order.tariff.billing_period.value]}
             """,
@@ -345,8 +344,10 @@ async def add_traffic_to_user_virtual_network(
 async def user_approve_extend_virtual_network_expire(
     call: CallbackQuery, db_session: AsyncSession
 ):
-    order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    _, _, order_id = call.data.split("-")
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.in_progress
 
     await call.message.edit_text(
@@ -380,8 +381,10 @@ async def user_cancel_extend_virtual_network_traffic(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     await state.clear()
-    order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    _, _, order_id = call.data.split("-")
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.failed
     order.deleted_at = datetime.now()
 
@@ -397,10 +400,11 @@ async def user_cancel_extend_virtual_network_traffic(
 async def admin_approve_extend_virtual_network_expire(
     call: CallbackQuery, db_session: AsyncSession
 ):
-    order_id = call.data.split("-")[-1]
-    user_id = call.data.split("-")[-2]
+    _, user_id, order_id = call.data.split("-")
 
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.completed
 
     user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key(
@@ -411,10 +415,20 @@ async def admin_approve_extend_virtual_network_expire(
         order.tariff.term * multiplier_billing_period[order.tariff.billing_period.value]
     )
     user_virtual_network.expire += timedelta(days=extend_expire)
-    await marzban_manager.extend_expire_to_marz_user(
+    r = await marzban_manager.update_expire_to_marz_user(
         name_user_virtual_network=user_virtual_network.virtual_network_key,
         extend_date_by=extend_expire,
     )
+    if not r:
+        await call.message.answer("Произошла ошибка")
+
+    await marzban_manager.reset_virtual_network_data(
+        name_user_virtual_network=user_virtual_network.virtual_network_key,
+        tariff_id=order.tariff.id,
+    )
+
+    user_virtual_network.notified_expired_soon = False
+    user_virtual_network.notified_expired_done = False
 
     await call.message.edit_text(
         text=f"""
@@ -465,9 +479,12 @@ async def view_user_virtual_networks(call: CallbackQuery, db_session: AsyncSessi
     marz_user_virtual_network = await marzban_manager.get_marz_user_virtual_network(
         name_user_virtual_network=virtual_network_key
     )
-    await call.message.edit_text(
-        parse_mode=ParseMode.MARKDOWN,
-        text=f"""
+    if not marz_user_virtual_network:
+        await call.message.answer(text="Произошла ошибка")
+    else:
+        await call.message.edit_text(
+            parse_mode=ParseMode.MARKDOWN,
+            text=f"""
 Статус: {status_virtual_network[marz_user_virtual_network.status] if status_virtual_network.get(marz_user_virtual_network.status) else "Не известно"}
 Лимит трафика: {marz_user_virtual_network.data_limit}
 Использовано трафика трафика: {marz_user_virtual_network.used_traffic}
@@ -478,8 +495,8 @@ async def view_user_virtual_networks(call: CallbackQuery, db_session: AsyncSessi
 ```
 {user_virtual_network.virtual_networks}
 ```
-        """,
-        reply_markup=kbs_user_virtual_network.user_virtual_network_inline_buttons_builder(
-            user_virtual_network_key=virtual_network_key
-        ),
-    )
+            """,
+            reply_markup=kbs_user_virtual_network.user_virtual_network_inline_buttons_builder(
+                user_virtual_network_key=virtual_network_key
+            ),
+        )
