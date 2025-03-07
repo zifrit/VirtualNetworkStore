@@ -1,9 +1,12 @@
+import os
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
@@ -31,9 +34,29 @@ class RedisSettings(BaseSettings):
 
 
 class MarzbanSettings(BaseSettings):
-    URL: str = "http://127.0.0.1:8111"
-    USERNAME: str = "admin"
-    PASSWORD: str = "Hw3lhDgLThXO"
+    M_URL: str = Field(default="None")
+    M_USERNAME: str = Field(default="None")
+    M_PASSWORD: str = Field(default="None")
+
+    def _reload_from_env(self, prefix: str) -> None:
+        """
+        Перезагружает значение из окружения для текущего ключа
+        """
+        env_value_1 = os.getenv(f"{prefix}_M_USERNAME")
+        env_value_2 = os.getenv(f"{prefix}_M_PASSWORD")
+        env_value_3 = os.getenv(f"{prefix}_M_URL")
+        if env_value_1 and env_value_2 and env_value_3:
+            self.M_USERNAME = env_value_1
+            self.M_PASSWORD = env_value_2
+            self.M_URL = env_value_3
+
+    def get_cred(self, prefix: str) -> dict[str, str]:
+        self._reload_from_env(prefix)
+        return {
+            "url": self.M_URL,
+            "username": self.M_USERNAME,
+            "password": self.M_PASSWORD,
+        }
 
 
 db_settings = Database()

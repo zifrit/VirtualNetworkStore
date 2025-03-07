@@ -29,7 +29,7 @@ from marzban_api_client.types import Response
 
 from core.db_connections import db_session
 from crud.virtual_network import tariff_manager
-from src.core.settings import marzban_settings
+from src.core.settings import marzban_settings, MarzbanSettings
 
 
 logger = logging.getLogger(__name__)
@@ -37,41 +37,46 @@ admin_logger = logging.getLogger("admin_log")
 
 
 class MarzBanClient:
-    def __init__(self, base_url: str, logger: Logger):
+    def __init__(self, marz_settings: MarzbanSettings, logger: Logger):
         self._client: Optional[AuthenticatedClient] = None
         self._exp_at: Optional[datetime] = None
-        self._base_url: str = base_url
+        self._marz_settings: MarzbanSettings = marz_settings
         self._logger = logger
         self._token: str = ""
 
-    async def get_client(self) -> AuthenticatedClient:
+    async def get_client(self, prefix: str = "PANDA") -> AuthenticatedClient:
         """
         Получение клиента для работы с системой
         :return:
         """
         if not self._client or self._exp_at < datetime.now():
+            cred = self._marz_settings.get_cred(prefix=prefix)
             self._logger.info(f"Get new token")
-            token = await self.get_token()
+            token = await self.get_token(
+                username=cred["username"],
+                password=cred["password"],
+                base_url=cred["url"],
+            )
             self._token = token
             self._exp_at = datetime.now() + timedelta(minutes=1440)
             self._client = AuthenticatedClient(
-                base_url=self._base_url, token=self._token, verify_ssl=True
+                base_url=cred["url"], token=self._token, verify_ssl=True
             )
             self._logger.info(f"Set new client object")
         self._logger.info(f"We have client object")
         return self._client
 
-    async def get_token(self) -> str:
+    async def get_token(self, username: str, password: str, base_url: str) -> str:
         """
         Осуществляется вход в систему и получается токен для дальнейшей работы с клиентом
         :return:
         """
         try:
             login_data = BodyAdminTokenApiAdminTokenPost(
-                username=marzban_settings.USERNAME,
-                password=marzban_settings.PASSWORD,
+                username=username,
+                password=password,
             )
-            async with Client(base_url=self._base_url) as client:
+            async with Client(base_url=base_url) as client:
                 token = await admin_token.asyncio(
                     client=client,
                     body=login_data,
@@ -338,7 +343,7 @@ class MarzBanManager:
         return new_utc_timestamp
 
 
-marzban_client = MarzBanClient(marzban_settings.URL, logger=logger)
+marzban_client = MarzBanClient(marzban_settings, logger=logger)
 marzban_manager = MarzBanManager(admin_logger, marzban_client)
 
 
@@ -370,6 +375,24 @@ async def main():
     # )
 
     # await marzban_manager.delete_user_virtual_network("zifrit_2Em7oZsL")
+
+    # data = await marzban_manager.add_traffic_to_marz_user(
+    #     name_user_virtual_network="zifrit_Bt0NdnFG", value=200
+    # )
+    # timedelta(days=1)
+    r = await marzban_manager.ping()
+    print(r.to_dict())
+    user = r.to_dict()["user"]
+    for item, key in r.to_dict().items():
+        print(item)
+        print(key)
+    # print(data.created_at)
+    # print(datetime.fromtimestamp(data.on_hold_expire_duration))
+    # print(datetime.fromtimestamp(data.expire) - timedelta(days=30))
+    # a = datetime.fromtimestamp(data.expire)
+    # b = datetime.now()
+    # c = a - b
+    # print(c < timedelta(days=1))
 
 
 if __name__ == "__main__":
