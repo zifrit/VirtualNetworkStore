@@ -24,7 +24,11 @@ async def start_handler(
     if await check_subscription(message.from_user.id, message.bot):
         if not await user_manager.get_by_tg_id(db_session, message.from_user.id):
             create_user = CreateTgUserSchema(
-                username=message.from_user.username,
+                username=(
+                    message.from_user.username
+                    if message.from_user.username
+                    else message.from_user.id
+                ),
                 tg_id=message.from_user.id,
             )
             await user_manager.create(
