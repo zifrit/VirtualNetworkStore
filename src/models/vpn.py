@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 if typing.TYPE_CHECKING:
     from src.models.user import TgUser
     from src.models.order import Order
+    from src.models.marzban import MarzbanService
 
 
 class StatusVirtualNetwork(enum.Enum):
@@ -44,6 +45,13 @@ class UserVirtualNetworks(IdCUDMixin):
     )
     tg_user_id: Mapped[int] = mapped_column(ForeignKey("tg_users.id"))
     tg_user: Mapped["TgUser"] = relationship(back_populates="user_virtual_networks")
+
+    marzban_service_id: Mapped[int | None] = mapped_column(
+        ForeignKey("marzban_services.id")
+    )
+    marzban_service: Mapped["MarzbanService"] = relationship(
+        back_populates="user_virtual_networks"
+    )
 
     notified_low_traffic_data: Mapped[bool] = mapped_column(
         Boolean(), default=False, server_default="false"

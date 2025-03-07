@@ -5,3 +5,4 @@ from .user import TgUser
 
 from .vpn import UserVirtualNetworks, Tariff
 from .order import Order
+from .marzban import MarzbanService
