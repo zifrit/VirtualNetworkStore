@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.vpn import EnumStatusVirtualNetwork
 from src.core.settings import bot_settings
 from src.crud.order import order_manager
 from src.crud.virtual_network import user_virtual_networks_manager, tariff_manager
@@ -185,17 +186,20 @@ async def admin_approve_extend_virtual_network_traffic(
 ):
     _, user_id, order_id = call.data.split("-")
 
-    order = await order_manager.get_by_id_with_tariff(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id_with_tariff(
+        session=db_session, id_=int(order_id)
+    )
     order.status = OrderStatus.completed
 
-    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key(
+    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key_with_marzban(
         session=db_session,
         virtual_network_key=order.virtual_network_key,
     )
     user_virtual_network.traffic_limit += order.tariff.traffic_limit
     r = await marzban_manager.update_traffic_to_marz_user(
         name_user_virtual_network=user_virtual_network.virtual_network_key,
-        value=user_virtual_network.traffic_limit,
+        marzban_service_name=user_virtual_network.marzban_service.name,
+        value=int(user_virtual_network.traffic_limit) * (1024**3),
     )
     if not r:
         await call.message.answer(text="Произошла ошибка")
@@ -249,13 +253,14 @@ async def delete_virtual_network(
 ):
     await state.clear()
     virtual_network_key = call.data.split("-")[-1]
-    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key(
+    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key_with_marzban(
         session=db_session,
         virtual_network_key=virtual_network_key,
     )
     user_virtual_network.deleted_at = datetime.now(timezone.utc)
     await marzban_manager.delete_user_virtual_network(
-        name_user_virtual_network=virtual_network_key
+        name_user_virtual_network=virtual_network_key,
+        marzban_service_name=user_virtual_network.marzban_service.name,
     )
     await call.message.edit_text(
         text="Виртуальная сеть была удалена",
@@ -308,7 +313,6 @@ async def add_traffic_to_user_virtual_network(
     tariff = await tariff_manager.get_active_tariff_by_id(
         session=db_session, tariff_id=int(tariff_id)
     )
-    print(tariff)
     await call.message.answer("asdaws")
 
     tg_user = await user_manager.get_by_tg_id(db_session, id_=call.from_user.id)
@@ -407,7 +411,7 @@ async def admin_approve_extend_virtual_network_expire(
     )
     order.status = OrderStatus.completed
 
-    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key(
+    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key_with_marzban(
         session=db_session,
         virtual_network_key=order.virtual_network_key,
     )
@@ -415,8 +419,10 @@ async def admin_approve_extend_virtual_network_expire(
         order.tariff.term * multiplier_billing_period[order.tariff.billing_period.value]
     )
     user_virtual_network.expire += timedelta(days=extend_expire)
+    user_virtual_network.used_traffic = 0
     r = await marzban_manager.update_expire_to_marz_user(
         name_user_virtual_network=user_virtual_network.virtual_network_key,
+        marzban_service_name=user_virtual_network.marzban_service.name,
         extend_date_by=extend_expire,
     )
     if not r:
@@ -425,6 +431,7 @@ async def admin_approve_extend_virtual_network_expire(
     await marzban_manager.reset_virtual_network_data(
         name_user_virtual_network=user_virtual_network.virtual_network_key,
         tariff_id=order.tariff.id,
+        marzban_service_name=user_virtual_network.marzban_service.name,
     )
 
     user_virtual_network.notified_expired_soon = False
@@ -451,7 +458,7 @@ async def admin_cancel_extend_virtual_network_expire(
     call: CallbackQuery, db_session: AsyncSession
 ):
     order_id = call.data.split("-")[-1]
-    order = await order_manager.get_by_id(session=db_session, id_=order_id)
+    order = await order_manager.get_by_id(session=db_session, id_=int(order_id))
     order.status = OrderStatus.failed
     order.deleted_at = datetime.now()
 
@@ -473,30 +480,24 @@ async def admin_cancel_extend_virtual_network_expire(
 @router.callback_query(F.data.startswith("virtual_network-"))
 async def view_user_virtual_networks(call: CallbackQuery, db_session: AsyncSession):
     virtual_network_key = call.data.split("-")[-1]
-    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key(
+    user_virtual_network = await user_virtual_networks_manager.get_user_virtual_network_by_virtual_network_key_with_marzban(
         session=db_session, virtual_network_key=virtual_network_key
     )
-    marz_user_virtual_network = await marzban_manager.get_marz_user_virtual_network(
-        name_user_virtual_network=virtual_network_key
-    )
-    if not marz_user_virtual_network:
-        await call.message.answer(text="Произошла ошибка")
-    else:
-        await call.message.edit_text(
-            parse_mode=ParseMode.MARKDOWN,
-            text=f"""
-Статус: {status_virtual_network[marz_user_virtual_network.status] if status_virtual_network.get(marz_user_virtual_network.status) else "Не известно"}
-Лимит трафика: {marz_user_virtual_network.data_limit}
-Использовано трафика трафика: {marz_user_virtual_network.used_traffic}
+    await call.message.edit_text(
+        parse_mode=ParseMode.MARKDOWN,
+        text=f"""
+Статус: {EnumStatusVirtualNetwork[user_virtual_network.status.value].value}
+Лимит трафика: {int(user_virtual_network.traffic_limit)} гб
+Использовано трафика трафика: {user_virtual_network.used_traffic}
 
-Срок окончания: {datetime.fromtimestamp(marz_user_virtual_network.expire).date()}
+Срок окончания: {user_virtual_network.expire.strftime("%d.%m.%Y %H:%M")}
 
 
 ```
 {user_virtual_network.virtual_networks}
 ```
-            """,
-            reply_markup=kbs_user_virtual_network.user_virtual_network_inline_buttons_builder(
-                user_virtual_network_key=virtual_network_key
-            ),
-        )
+        """,
+        reply_markup=kbs_user_virtual_network.user_virtual_network_inline_buttons_builder(
+            user_virtual_network_key=virtual_network_key
+        ),
+    )

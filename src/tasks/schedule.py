@@ -5,5 +5,5 @@ from src.tasks.tasks import check_user_virtual_network_expired, ping_server
 scheduler = AsyncIOScheduler()
 scheduler.add_job(
     func=ping_server,
-    trigger=IntervalTrigger(minutes=5),
+    trigger=IntervalTrigger(minutes=4),
 )

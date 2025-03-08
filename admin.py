@@ -42,6 +42,8 @@ class UserVirtualNetworkAdmin(ModelView, model=UserVirtualNetworks):
         UserVirtualNetworks.type_virtual_networks,
         UserVirtualNetworks.marzban_service,
         UserVirtualNetworks.deleted_at,
+        UserVirtualNetworks.used_traffic,
+        UserVirtualNetworks.traffic_limit,
     ]
 
 

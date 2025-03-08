@@ -26,9 +26,12 @@ from marzban_api_client.models import (
     UserDataLimitResetStrategy,
 )
 from marzban_api_client.types import Response
+from sqlalchemy.util import await_only
 
 from core.db_connections import db_session
+from crud.marzban import marzban_service_manager
 from crud.virtual_network import tariff_manager
+from services.update_user_virtual_network_data import update_user_virtual_network_data
 from src.core.settings import marzban_settings, MarzbanSettings
 
 
@@ -38,8 +41,9 @@ admin_logger = logging.getLogger("admin_log")
 
 class MarzBanClient:
     def __init__(self, marz_settings: MarzbanSettings, logger: Logger):
-        self._client: Optional[AuthenticatedClient] = None
-        self._exp_at: Optional[datetime] = None
+        self._clients: dict[str, dict[str, AuthenticatedClient | datetime]] = dict(
+            dict()
+        )
         self._marz_settings: MarzbanSettings = marz_settings
         self._logger = logger
         self._token: str = ""
@@ -49,22 +53,29 @@ class MarzBanClient:
         Получение клиента для работы с системой
         :return:
         """
-        if not self._client or self._exp_at < datetime.now():
-            cred = self._marz_settings.get_cred(prefix=prefix)
-            self._logger.info(f"Get new token")
-            token = await self.get_token(
-                username=cred["username"],
-                password=cred["password"],
-                base_url=cred["url"],
-            )
-            self._token = token
-            self._exp_at = datetime.now() + timedelta(minutes=1440)
-            self._client = AuthenticatedClient(
-                base_url=cred["url"], token=self._token, verify_ssl=True
-            )
-            self._logger.info(f"Set new client object")
-        self._logger.info(f"We have client object")
-        return self._client
+        if (
+            self._clients.get(prefix)
+            and self._clients[prefix]["exp_at"] > datetime.now()
+        ):
+            self._logger.info(f"Return exist client")
+            return self._clients.get(prefix)["client"]
+        cred = self._marz_settings.get_cred(prefix=prefix)
+        self._logger.info(f"Get new token")
+        token = await self.get_token(
+            username=cred["username"],
+            password=cred["password"],
+            base_url=cred["url"],
+        )
+        self._logger.info(f"Create client")
+        new_client = AuthenticatedClient(
+            base_url=cred["url"], token=token, verify_ssl=True
+        )
+        exp_at = datetime.now() + timedelta(minutes=1440)
+        self._clients[prefix] = {
+            "client": new_client,
+            "exp_at": exp_at,
+        }
+        return new_client
 
     async def get_token(self, username: str, password: str, base_url: str) -> str:
         """
@@ -110,10 +121,12 @@ class MarzBanManager:
         self,
         name_user_virtual_network: str,
         expire,
-        data_limit: int = 200,
+        marzban_service_name: str,
+        data_limit: int = 200 * 1024**3,
     ) -> Response | bool:
         """
         Создание пользователя виртуальной сети в системе.
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Принимает название для пользователя виртуальной сети,
         :param expire: Время работы виртуальной сети,
         :param data_limit: Ограничение трафика для виртуальной сеит
@@ -128,44 +141,60 @@ class MarzBanManager:
         )
         try:
             response: Response = add_user.sync_detailed(
-                client=await self._client.get_client(), body=user_data
+                client=await self._client.get_client(prefix=marzban_service_name),
+                body=user_data,
             )
             self._logger.info(
-                "Created %s virtual network. Status code %s",
+                "Created %s virtual network in %s. Status code %s",
                 name_user_virtual_network,
+                marzban_service_name,
                 response.status_code,
             )
             return response.parsed
         except httpx.RequestError as e:
-            self._logger.error("When update_traffic_to_marz_user happened error: %s", e)
+            self._logger.error(
+                "When create_virtual_network from %s happened error: %s",
+                marzban_service_name,
+                e,
+            )
             return False
 
     async def get_marz_user_virtual_network(
-        self, name_user_virtual_network: str
+        self,
+        name_user_virtual_network: str,
+        marzban_service_name: str,
     ) -> UserResponse | bool:
         """
         Получает пользователя виртуальной сети из системы
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         """
         try:
             response: Response = await get_user.asyncio_detailed(
-                name_user_virtual_network, client=await self._client.get_client()
+                name_user_virtual_network,
+                client=await self._client.get_client(prefix=marzban_service_name),
             )
             self._logger.info(
-                "Get '%s' virtual network data. Status code %s",
+                "Get '%s' from %s virtual network data. Status code %s",
                 name_user_virtual_network,
+                marzban_service_name,
                 response.status_code,
             )
             return response.parsed
         except httpx.RequestError as e:
-            self._logger.error("When update_traffic_to_marz_user happened error: %s", e)
+            self._logger.error(
+                "When get_marz_user_virtual_network from %s happened error: %s",
+                marzban_service_name,
+                e,
+            )
             return False
 
     async def update_traffic_to_marz_user(
-        self, name_user_virtual_network: str, value: int
+        self, name_user_virtual_network: str, value: int, marzban_service_name: str
     ) -> Response | bool:
         """
         Расширяет лимит трафика пользователя виртуальной сети
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network:  Название пользователя виртуальной сети.
         :param value: Новое значение лимита
         """
@@ -175,29 +204,39 @@ class MarzBanManager:
         try:
             response: Response = await modify_user.asyncio_detailed(
                 name_user_virtual_network,
-                client=await self._client.get_client(),
+                client=await self._client.get_client(prefix=marzban_service_name),
                 body=user_data,
             )
             self._logger.info(
-                "Virtual network '%s' set %s data limit",
+                "Virtual network '%s' from %s set %s data limit",
                 name_user_virtual_network,
+                marzban_service_name,
                 value,
             )
             return response.parsed
         except httpx.RequestError as e:
-            self._logger.error("When update_traffic_to_marz_user happened error: %s", e)
+            self._logger.error(
+                "When update_traffic_to_marz_user from %s happened error: %s",
+                marzban_service_name,
+                e,
+            )
             return False
 
     async def update_expire_to_marz_user(
-        self, name_user_virtual_network: str, extend_date_by: int
+        self,
+        name_user_virtual_network: str,
+        extend_date_by: int,
+        marzban_service_name: str,
     ) -> Response | bool:
         """
         Расширяет срок жизни пользователя виртуальной сети
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network:  Название пользователя виртуальной сети.
         :param extend_date_by: На сколько расширится срок жизни виртуальной сети
         """
         user_virtual_network = await self.get_marz_user_virtual_network(
-            name_user_virtual_network=name_user_virtual_network
+            name_user_virtual_network=name_user_virtual_network,
+            marzban_service_name=marzban_service_name,
         )
         if not user_virtual_network:
             return False
@@ -205,40 +244,48 @@ class MarzBanManager:
         old_expire = datetime.fromtimestamp(user_virtual_network.expire)
 
         new_expire = MarzBanManager.expire_timestamp(
-            old_expire + timedelta(days=extend_date_by)
+            old_expire - timedelta(days=extend_date_by)
         )
         user_data = UserModify(expire=new_expire)
         try:
             response: Response = await modify_user.asyncio_detailed(
                 name_user_virtual_network,
-                client=await self._client.get_client(),
+                client=await self._client.get_client(prefix=marzban_service_name),
                 body=user_data,
             )
             self._logger.info(
-                "Virtual network '%s' extended expire to %s ",
+                "Virtual network '%s' from %s extended expire to %s ",
                 name_user_virtual_network,
+                marzban_service_name,
                 old_expire + timedelta(days=extend_date_by),
             )
             return response.parsed
         except httpx.ReadError as e:
-            self._logger.error("When update_expire_to_marz_user happened error: %s", e)
+            self._logger.error(
+                "When update_expire_to_marz_user from %s happened error: %s",
+                marzban_service_name,
+                e,
+            )
             return False
 
     async def get_user_virtual_network_links(
-        self, name_user_virtual_network: str
+        self, name_user_virtual_network: str, marzban_service_name: str
     ) -> dict[str, str] | bool:
         """
         Получает все ключи для подключения к виртуальной сети.
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         :return: Строка содержащая ключи подключения к виртуальной сети.
         """
         try:
             response: UserResponse = await self.get_marz_user_virtual_network(
-                name_user_virtual_network
+                name_user_virtual_network, marzban_service_name=marzban_service_name
             )
         except httpx.ReadError as e:
             self._logger.error(
-                "When get_user_virtual_network_links happened error: %s", e
+                "When get_user_virtual_network_links from %s happened error: %s",
+                marzban_service_name,
+                e,
             )
             return False
         keys = {}
@@ -254,61 +301,74 @@ class MarzBanManager:
             elif key_data[0] == "ss":
                 keys["shadowsocks"] = link
         self._logger.info(
-            "Get '%s' Virtual network links: %s", name_user_virtual_network, keys
+            "Get '%s' from %s Virtual network links: %s",
+            name_user_virtual_network,
+            marzban_service_name,
+            keys,
         )
         return keys
 
-    async def delete_user_virtual_network(self, name_user_virtual_network: str) -> None:
+    async def delete_user_virtual_network(
+        self, name_user_virtual_network: str, marzban_service_name: str
+    ) -> None:
         """
         Удаляет виртуальную сеть пользователя, уменьшая его срок жизни на 10 дней после чего удаляю всех у кого больше 10 как истек строк жизни.
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         :return: None
         """
-        thirty_days = MarzBanManager.expire_timestamp(
+        ten_days = MarzBanManager.expire_timestamp(
             datetime.now(timezone.utc) - timedelta(days=10)
         )
-        user_data = UserModify(expire=thirty_days)
+        user_data = UserModify(expire=ten_days)
         await modify_user.asyncio_detailed(
             name_user_virtual_network,
-            client=await self._client.get_client(),
+            client=await self._client.get_client(prefix=marzban_service_name),
             body=user_data,
         )
 
         delete_utc_time = datetime.now(timezone.utc) - timedelta(days=9, hours=23)
         await delete_expired_users.asyncio_detailed(
-            expired_before=delete_utc_time, client=await self._client.get_client()
+            expired_before=delete_utc_time,
+            client=await self._client.get_client(prefix=marzban_service_name),
         )
-        self._logger.info("Virtual network '%s' deleted", name_user_virtual_network)
+        self._logger.info(
+            "Virtual network '%s' from %s deleted",
+            name_user_virtual_network,
+            marzban_service_name,
+        )
 
     async def reset_user_virtual_network_data_usage(
-        self, name_user_virtual_network: str
+        self, name_user_virtual_network: str, marzban_service_name: str
     ) -> None:
         """
         Сбрасывает количество потраченного трафика у виртуальной сети пользователя.
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         :return: None
         """
 
         await reset_user_data_usage.asyncio_detailed(
-            client=await self._client.get_client(), username=name_user_virtual_network
+            client=await self._client.get_client(prefix=marzban_service_name),
+            username=name_user_virtual_network,
         )
         self._logger.info(
             "Virtual network '%s' reset traffic data", name_user_virtual_network
         )
 
     async def reset_virtual_network_data(
-        self,
-        name_user_virtual_network: str,
-        tariff_id: int,
+        self, name_user_virtual_network: str, tariff_id: int, marzban_service_name: str
     ) -> None:
         """
 
+        :param marzban_service_name: Название марзбан сервера
         :param name_user_virtual_network: Название пользователя виртуальной сети.
         :param tariff_id: Идентификатор тарифа
         :return:
         """
         await self.reset_user_virtual_network_data_usage(
-            name_user_virtual_network=name_user_virtual_network
+            name_user_virtual_network=name_user_virtual_network,
+            marzban_service_name=marzban_service_name,
         )
         session = await self._db_client
         tariff = await tariff_manager.get_active_tariff_by_id(
@@ -317,6 +377,7 @@ class MarzBanManager:
 
         await self.update_traffic_to_marz_user(
             name_user_virtual_network=name_user_virtual_network,
+            marzban_service_name=marzban_service_name,
             value=tariff.traffic_limit,
         )
 
@@ -325,16 +386,50 @@ class MarzBanManager:
         Делает запрос на получения всех пользователей, сейчас выступает в роли проверки доступа к серверу
         :return:
         """
-        response: Response = await get_users.asyncio_detailed(
-            client=await self._client.get_client()
-        )
-        if response.status_code == 200:
-            self._logger.info("Sever is work, code: %s", response.status_code)
-        else:
-            self._logger.error(
-                "Server returned unexpected status code: %s", response.status_code
+        for marzban_service_name in await marzban_service_manager.get_services(
+            session=await self._db_client
+        ):
+            response: Response = await get_users.asyncio_detailed(
+                client=await self._client.get_client(prefix=marzban_service_name),
             )
-        return response.parsed
+            user_virtual_network_data = await self.search_user_virtual_network_data(
+                response.parsed.to_dict()["users"]
+            )
+            await update_user_virtual_network_data(data=user_virtual_network_data)
+            if response.status_code == 200:
+                self._logger.info(
+                    "Sever %s is work, code: %s",
+                    marzban_service_name,
+                    response.status_code,
+                )
+            else:
+                self._logger.error(
+                    "Server %s returned unexpected status code: %s",
+                    marzban_service_name,
+                    response.status_code,
+                )
+
+    async def get_users_(self):
+        response: Response = await get_users.asyncio_detailed(
+            client=await self._client.get_client(),
+        )
+        user_virtual_network_data = await self.search_user_virtual_network_data(
+            response.parsed.to_dict()["users"]
+        )
+
+    @staticmethod
+    async def search_user_virtual_network_data(
+        datas: dict,
+    ) -> dict[str, dict[str, str]]:
+        result = {}
+        for data in datas:
+            result[data["username"]] = {
+                "status": data["status"],
+                "used_traffic": data["used_traffic"],
+                "data_limit": data["data_limit"],
+                "expire": data["expire"],
+            }
+        return result
 
     @staticmethod
     def expire_timestamp(expire: datetime):

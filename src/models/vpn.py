@@ -3,7 +3,16 @@ import enum
 from datetime import datetime
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Integer, Text, Boolean
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    DateTime,
+    Integer,
+    Text,
+    Boolean,
+    NUMERIC,
+    Numeric,
+)
 from sqlalchemy.dialects.postgresql import ENUM
 
 if typing.TYPE_CHECKING:
@@ -12,9 +21,18 @@ if typing.TYPE_CHECKING:
     from src.models.marzban import MarzbanService
 
 
+class EnumStatusVirtualNetwork(enum.Enum):
+    active = "Активный"
+    inactive = "Неактивный"
+    expired = "Срок жизни истек"
+    limited = "Закончился трафик"
+
+
 class StatusVirtualNetwork(enum.Enum):
     active = "active"
     inactive = "inactive"
+    expired = "expired"
+    limited = "limited"
 
 
 class TypeVirtualNetwork(enum.Enum):
@@ -27,7 +45,7 @@ class TypeVirtualNetwork(enum.Enum):
 class UserVirtualNetworks(IdCUDMixin):
     __tablename__ = "user_virtual_networks"
     virtual_network_key: Mapped[str] = mapped_column(String(255), unique=True)
-    status: Mapped[StatusVirtualNetwork] = mapped_column(
+    status: Mapped[StatusVirtualNetwork | None] = mapped_column(
         ENUM(StatusVirtualNetwork, name="status_user_virtual_networks"),
         comment="Состояние купленного виртуальной сети",
     )
@@ -37,11 +55,14 @@ class UserVirtualNetworks(IdCUDMixin):
     )
     virtual_networks: Mapped[str] = mapped_column(Text())
     expire: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    traffic_limit: Mapped[int] = mapped_column(
-        comment="Объем разрешённого трафика", default=200, server_default="200"
+    traffic_limit: Mapped[float] = mapped_column(
+        Numeric(10, 2),
+        comment="Объем разрешённого трафика",
+        default=200,
+        server_default="200",
     )
-    tg_used_traffic: Mapped[int] = mapped_column(
-        Integer(), comment="Сколько гб пользователь уже израсходовал"
+    used_traffic: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), comment="Сколько гб пользователь уже израсходовал"
     )
     tg_user_id: Mapped[int] = mapped_column(ForeignKey("tg_users.id"))
     tg_user: Mapped["TgUser"] = relationship(back_populates="user_virtual_networks")

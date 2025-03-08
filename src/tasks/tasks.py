@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime, timedelta
 
+from crud.marzban import marzban_service_manager
 from src.core.db_connections import db_session
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import joinedload
 from src.models.vpn import UserVirtualNetworks
 from src.models.user import TgUser
+from src.models.marzban import MarzbanService
 from src.marzban.client import marzban_manager
 from src.core.settings import bot
 from src.kbs.other import move_to
@@ -22,7 +24,11 @@ async def check_user_virtual_network_traffic():
                     TgUser.tg_id,
                     TgUser.id,
                     TgUser.username,
-                )
+                ),
+                joinedload(UserVirtualNetworks.marzban_service).load_only(
+                    MarzbanService.id,
+                    MarzbanService.name,
+                ),
             )
             .where(
                 and_(
@@ -36,7 +42,8 @@ async def check_user_virtual_network_traffic():
         )
         for user_virtual_network in user_virtual_networks:  # type: UserVirtualNetworks
             virtual_network = await marzban_manager.get_marz_user_virtual_network(
-                name_user_virtual_network=user_virtual_network.virtual_network_key
+                name_user_virtual_network=user_virtual_network.virtual_network_key,
+                marzban_service_name=user_virtual_network.marzban_service.name,
             )
             if not virtual_network:
                 return
@@ -76,7 +83,6 @@ async def check_user_virtual_network_traffic():
 async def check_user_virtual_network_expired():
     async with db_session.session_factory() as session:
         loger.info("task running")
-        print("task running")
         user_virtual_networks = await session.scalars(
             select(UserVirtualNetworks)
             .options(
@@ -84,7 +90,11 @@ async def check_user_virtual_network_expired():
                     TgUser.tg_id,
                     TgUser.id,
                     TgUser.username,
-                )
+                ),
+                joinedload(UserVirtualNetworks.marzban_service).load_only(
+                    MarzbanService.id,
+                    MarzbanService.name,
+                ),
             )
             .where(
                 and_(
@@ -98,7 +108,8 @@ async def check_user_virtual_network_expired():
         )
         for user_virtual_network in user_virtual_networks:  # type: UserVirtualNetworks
             virtual_network = await marzban_manager.get_marz_user_virtual_network(
-                name_user_virtual_network=user_virtual_network.virtual_network_key
+                name_user_virtual_network=user_virtual_network.virtual_network_key,
+                marzban_service_name=user_virtual_network.marzban_service.name,
             )
             if not virtual_network:
                 return

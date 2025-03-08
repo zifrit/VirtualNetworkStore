@@ -7,6 +7,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crud.marzban import marzban_service_manager
+from handlers.user_virtual_network import multiplier_billing_period
 from src.core.settings import bot_settings
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
 from src.crud.virtual_network import (
@@ -177,19 +179,28 @@ async def admin_approve_buy_virtual_network(
 
     virtual_network_key = f"{user.username}_{generate_random_string()}"
     order.virtual_network_key = virtual_network_key
-    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
-
+    days_expire = (
+        order.tariff.term * multiplier_billing_period[order.tariff.billing_period.value]
+    )
+    marzban_service = await marzban_service_manager.get_lower_count_users(
+        session=db_session
+    )
+    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+        days=days_expire
+    )
     r = await marzban_manager.create_virtual_network(
         name_user_virtual_network=virtual_network_key,
         expire=expire,
-        data_limit=order.tariff.traffic_limit,
+        data_limit=order.tariff.traffic_limit * (1024**3),
+        marzban_service_name=marzban_service.name,
     )
     if not r:
         await call.message.answer(text="Произошла ошибка")
     else:
 
         virtual_network = await marzban_manager.get_user_virtual_network_links(
-            name_user_virtual_network=virtual_network_key
+            name_user_virtual_network=virtual_network_key,
+            marzban_service_name=marzban_service.name,
         )
 
         user_virtual_network_schema = CreateUserVirtualNetworkSchema(
@@ -200,6 +211,7 @@ async def admin_approve_buy_virtual_network(
             expire=expire,
             traffic_limit=order.tariff.traffic_limit,
             tg_user_id=user.id,
+            marzban_service_id=marzban_service.id,
         )
         await user_virtual_networks_manager.create(
             session=db_session, obj_schema=user_virtual_network_schema
