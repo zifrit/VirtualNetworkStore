@@ -7,8 +7,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crud.marzban import marzban_service_manager
-from handlers.user_virtual_network import multiplier_billing_period
+from src.crud.marzban import marzban_service_manager
+from src.handlers.user_virtual_network import multiplier_billing_period
 from src.core.settings import bot_settings
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
 from src.crud.virtual_network import (

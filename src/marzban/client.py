@@ -2,7 +2,6 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from logging import Logger
-from typing import Optional
 
 import httpx
 from marzban_api_client import AuthenticatedClient, Client
@@ -26,12 +25,13 @@ from marzban_api_client.models import (
     UserDataLimitResetStrategy,
 )
 from marzban_api_client.types import Response
-from sqlalchemy.util import await_only
 
-from core.db_connections import db_session
-from crud.marzban import marzban_service_manager
-from crud.virtual_network import tariff_manager
-from services.update_user_virtual_network_data import update_user_virtual_network_data
+from src.core.db_connections import db_session
+from src.crud.marzban import marzban_service_manager
+from src.crud.virtual_network import tariff_manager
+from src.services.update_user_virtual_network_data import (
+    update_user_virtual_network_data,
+)
 from src.core.settings import marzban_settings, MarzbanSettings
 
 
