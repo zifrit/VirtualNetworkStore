@@ -2,7 +2,7 @@ import typing
 
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, BigInteger, ForeignKey
+from sqlalchemy import String, BigInteger, ForeignKey, Boolean
 
 if typing.TYPE_CHECKING:
     from src.models.vpn import UserVirtualNetworks
@@ -29,6 +29,24 @@ class TgUser(IdCUDMixin):
         foreign_keys="[Referral.referred_user_id]",
     )
     orders: Mapped[list["Order"]] = relationship(back_populates="tg_user")
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        comment="Является ли админом",
+    )
+    is_admin_panel: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        comment="Может ли зайти в админ панель",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        comment="Активен ли пользователь",
+    )
 
     repr_columns = ["tg_id", "username"]
 
