@@ -5,7 +5,7 @@ from aiogram.utils.deep_linking import decode_payload
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kbs.other import move_to
+from src.kbs.other import move_to
 from src.utils.check_sub import check_subscription
 from src.crud.user import user_manager, referral_manager
 from src.schemas.user import CreateTgUserSchema, CreateReferralSchema
