@@ -21,3 +21,13 @@ class ReferralSchema(BaseSchema):
 
 class CreateReferralSchema(ReferralSchema):
     pass
+
+
+class TgUserOrderMessageSchema(BaseSchema):
+    order_id: int
+    tg_id: int
+    message_id: int
+
+
+class CreateTgUserOrderMessageSchema(TgUserOrderMessageSchema):
+    pass

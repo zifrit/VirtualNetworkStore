@@ -13,7 +13,10 @@ load_dotenv()
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
-    ADMINS: tuple = (288680459,)
+
+
+class AdminSettings(BaseSettings):
+    SECRET_KEY: str
 
 
 class Database(BaseSettings):
@@ -60,6 +63,7 @@ class MarzbanSettings(BaseSettings):
 
 
 db_settings = Database()
+admin_settings = AdminSettings()
 bot_settings = Settings()
 redis_settings = RedisSettings()
 marzban_settings = MarzbanSettings()

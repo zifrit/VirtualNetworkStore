@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from aiogram import Router, F
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,7 @@ from src.crud.virtual_network import user_virtual_networks_manager, tariff_manag
 from src.kbs.other import move_to
 from src.marzban.client import marzban_manager
 from src.kbs import user_virtual_network as kbs_user_virtual_network, other
-from src.crud.user import user_manager
+from src.crud.user import user_manager, tg_user_order_message_manager
 from src.models.order import OrderStatus, OrderType
 from src.schemas.order import CreateOrderSchema
 
@@ -206,13 +207,28 @@ async def admin_approve_extend_virtual_network_traffic(
     user_virtual_network.notified_low_traffic_data = False
     user_virtual_network.notified_traffic_data_done = False
 
-    await call.message.edit_text(
-        text=f"""
-    {call.message.text}
+    text = f"""
+{call.message.text}
+
+ОПАЛЧЕНО!!!
     
-    ОПАЛЧЕНО!!!
-    """,
+Заявку обработал {call.from_user.username}
+    """
+
+    massages = await tg_user_order_message_manager.get_by_order_id(
+        session=db_session, order_id=order.id
     )
+    for massages in massages:
+        try:
+            await call.bot.edit_message_text(
+                text=text,
+                chat_id=massages.tg_id,
+                message_id=massages.message_id,
+            )
+            massages.approve = True
+            massages.tg_id_approve = call.from_user.id
+        except TelegramBadRequest:
+            pass
 
     await call.bot.send_message(
         chat_id=user_id,
@@ -234,13 +250,27 @@ async def admin_cancel_extend_virtual_network_traffic(
 
     user_id = call.data.split("-")[-2]
     text = f"""
-{call.message.text}
+    {call.message.text}
 
-НЕОПЛАЧЕНО!!!
-    """
-    await call.message.edit_text(
-        text=text,
+    НЕОПЛАЧЕНО!!!
+
+    Заявку обработал {call.from_user.username}
+        """
+
+    massages = await tg_user_order_message_manager.get_by_order_id(
+        session=db_session, order_id=order.id
     )
+    for massages in massages:
+        try:
+            await call.bot.edit_message_text(
+                text=text,
+                chat_id=massages.tg_id,
+                message_id=massages.message_id,
+            )
+            massages.approve = True
+            massages.tg_id_approve = call.from_user.id
+        except TelegramBadRequest:
+            pass
     await call.bot.send_message(
         chat_id=user_id,
         text="Оплата не пришла",
@@ -437,13 +467,28 @@ async def admin_approve_extend_virtual_network_expire(
     user_virtual_network.notified_expired_soon = False
     user_virtual_network.notified_expired_done = False
 
-    await call.message.edit_text(
-        text=f"""
+    text = f"""
     {call.message.text}
 
     ОПАЛЧЕНО!!!
-    """,
+
+    Заявку принял {call.from_user.username}
+        """
+
+    massages = await tg_user_order_message_manager.get_by_order_id(
+        session=db_session, order_id=order.id
     )
+    for massages in massages:
+        try:
+            await call.bot.edit_message_text(
+                text=text,
+                chat_id=massages.tg_id,
+                message_id=massages.message_id,
+            )
+            massages.approve = True
+            massages.tg_id_approve = call.from_user.id
+        except TelegramBadRequest:
+            pass
 
     await call.bot.send_message(
         chat_id=user_id,
@@ -464,13 +509,27 @@ async def admin_cancel_extend_virtual_network_expire(
 
     user_id = call.data.split("-")[-2]
     text = f"""
-{call.message.text}
+    {call.message.text}
 
-НЕОПЛАЧЕНО!!!
-    """
-    await call.message.edit_text(
-        text=text,
+    НЕОПЛАЧЕНО!!!
+
+    Заявку обработал {call.from_user.username}
+        """
+
+    massages = await tg_user_order_message_manager.get_by_order_id(
+        session=db_session, order_id=order.id
     )
+    for massages in massages:
+        try:
+            await call.bot.edit_message_text(
+                text=text,
+                chat_id=massages.tg_id,
+                message_id=massages.message_id,
+            )
+            massages.approve = True
+            massages.tg_id_approve = call.from_user.id
+        except TelegramBadRequest:
+            pass
     await call.bot.send_message(
         chat_id=user_id,
         text="Оплата не пришла",

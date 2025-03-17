@@ -3,24 +3,25 @@ import logging
 
 from aiogram import Router, F
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.marzban import marzban_service_manager
 from src.handlers.user_virtual_network import multiplier_billing_period
-from src.core.settings import bot_settings
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
 from src.crud.virtual_network import (
     tariff_manager,
     user_virtual_networks_manager,
 )
 from src.crud.order import order_manager
-from src.crud.user import user_manager
+from src.crud.user import user_manager, tg_user_order_message_manager
 from src.models.order import OrderType, OrderStatus
 from src.models.vpn import StatusVirtualNetwork, TypeVirtualNetwork
 from src.schemas.order import CreateOrderSchema
 from src.schemas.virtual_network import CreateUserVirtualNetworkSchema
+from src.schemas.user import CreateTgUserOrderMessageSchema
 from src.marzban.client import marzban_manager
 from src.utils.generate_random import generate_random_string
 
@@ -41,6 +42,7 @@ async def tariff_list_handler(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     """Обработчик, который показывает все тарифы виртуальных сетей"""
+    print(call.from_user.username)
     tariff_list = await tariff_manager.get_tariffs(db_session)
     data_tariff_list = [
         {
@@ -123,8 +125,8 @@ async def user_approve_buy_virtual_network(
 После оплаты в чате будет выслан ключ виртуальной сети.
             """
     )
-    for admin in bot_settings.ADMINS:
-        await call.bot.send_message(
+    for admin in await user_manager.get_admins(db_session):
+        msg = await call.bot.send_message(
             chat_id=admin,
             text=f""" 
 Пользователь {call.from_user.username}
@@ -139,6 +141,14 @@ async def user_approve_buy_virtual_network(
                 user_id=call.from_user.id,
                 order_id=order.id,
             ),
+        )
+        obj_schema = CreateTgUserOrderMessageSchema(
+            tg_id=admin,
+            order_id=order.id,
+            message_id=msg.message_id,
+        )
+        await tg_user_order_message_manager.create(
+            session=db_session, obj_schema=obj_schema
         )
 
 
@@ -197,7 +207,7 @@ async def admin_approve_buy_virtual_network(
     if not r:
         await call.message.answer(text="Произошла ошибка")
     else:
-
+        marzban_service.count_users += 1
         virtual_network = await marzban_manager.get_user_virtual_network_links(
             name_user_virtual_network=virtual_network_key,
             marzban_service_name=marzban_service.name,
@@ -217,13 +227,27 @@ async def admin_approve_buy_virtual_network(
             session=db_session, obj_schema=user_virtual_network_schema
         )
         text = f"""
-    {call.message.text}
+{call.message.text}
     
 ОПАЛЧЕНО!!!
+
+Заявку обработал {call.from_user.username}
 """
-        await call.message.edit_text(
-            text=text,
+        massages = await tg_user_order_message_manager.get_by_order_id(
+            session=db_session, order_id=order.id
         )
+        for massages in massages:
+            try:
+                await call.bot.edit_message_text(
+                    text=text,
+                    chat_id=massages.tg_id,
+                    message_id=massages.message_id,
+                )
+                massages.approve = True
+                massages.tg_id_approve = call.from_user.id
+            except TelegramBadRequest:
+                pass
+
         await call.bot.send_message(
             chat_id=user_id,
             parse_mode=ParseMode.MARKDOWN,

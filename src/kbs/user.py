@@ -29,15 +29,15 @@ start_inline_button = InlineKeyboardMarkup(
                 callback_data="about_us",
             ),
             InlineKeyboardButton(
-                text="🤝Партнеры",
-                callback_data="partners",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
                 text="🆘Помощь",
                 callback_data="user_help",
             ),
+        ],
+        [
+            # InlineKeyboardButton(
+            #     text="🤝Партнеры",
+            #     callback_data="partners",
+            # ),
             # InlineKeyboardButton(
             #     text="🧩Наши каналы",
             #     callback_data="user_help",

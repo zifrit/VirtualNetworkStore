@@ -2,7 +2,14 @@ import typing
 
 from src.models.base import IdCUDMixin
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import String, BigInteger, ForeignKey, Boolean
+from sqlalchemy import (
+    String,
+    BigInteger,
+    ForeignKey,
+    Boolean,
+    Integer,
+    UniqueConstraint,
+)
 
 if typing.TYPE_CHECKING:
     from src.models.vpn import UserVirtualNetworks
@@ -69,3 +76,18 @@ class Referral(IdCUDMixin):
         back_populates="invited_by",
         foreign_keys=[referred_user_id],
     )
+
+
+class TgUserOrderMessage(IdCUDMixin):
+    __tablename__ = "tg_user_order_messages"
+    __table_args__ = (
+        UniqueConstraint("order_id", "tg_id", name="idx_unique_order_id_tg_id"),
+    )
+
+    order_id: Mapped[int] = mapped_column(Integer)
+    tg_id: Mapped[int] = mapped_column(Integer)
+    message_id: Mapped[int] = mapped_column(Integer)
+    approve: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    tg_id_approve: Mapped[int | None] = mapped_column(Integer)

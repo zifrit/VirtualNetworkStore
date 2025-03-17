@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from src.models.user import TgUser, Referral
+from src.models.user import TgUser, Referral, TgUserOrderMessage
 from src.models.vpn import UserVirtualNetworks
 from src.crud.base import BaseManager
 from src.schemas.user import CreateReferralSchema
@@ -45,6 +45,16 @@ class UserManager(BaseManager[TgUser]):
         )
         return result
 
+    async def get_admins(self, session: AsyncSession) -> list[int]:
+        result = await session.scalars(
+            select(self._model.tg_id).where(
+                self._model.is_admin.is_(True),
+                self._model.deleted_at.is_(None),
+                self._model.is_active.is_(True),
+            )
+        )
+        return list(result)
+
 
 user_manager = UserManager(TgUser)
 
@@ -75,3 +85,16 @@ class ReferralManager(BaseManager[Referral]):
 
 
 referral_manager = ReferralManager(Referral)
+
+
+class TgUserOrderMessageManager(BaseManager[TgUserOrderMessage]):
+    async def get_by_order_id(
+        self, session: AsyncSession, order_id: int
+    ) -> list[TgUserOrderMessage]:
+        result = await session.scalars(
+            select(self._model).where(self._model.order_id == order_id)
+        )
+        return list(result)
+
+
+tg_user_order_message_manager = TgUserOrderMessageManager(TgUserOrderMessage)

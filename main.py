@@ -2,6 +2,8 @@ import asyncio
 import logging.config
 from aiogram import types
 
+from core.db_connections import db_session
+from crud.user import user_manager
 from src.core.settings import bot, dp, bot_settings
 from src.core.logger import LOGGING
 from src.utils.middleware import DatabaseMiddleware
@@ -23,22 +25,24 @@ commands = [
 
 # Функция, которая выполнится когда бот запустится
 async def start_bot():
-    for admin_id in bot_settings.ADMINS:
-        try:
-            scheduler.start()
-            await bot.send_message(admin_id, f"Бот запущен")
-        except:
-            scheduler.shutdown()
-            pass
-    loger.info("Бот успешно запущен.")
+    async with db_session.session_factory() as session:
+        for admin_id in await user_manager.get_admins(session=session):
+            try:
+                scheduler.start()
+                await bot.send_message(admin_id, f"Бот запущен")
+            except:
+                scheduler.shutdown()
+                pass
+        loger.info("Бот успешно запущен.")
 
 
 # Функция, которая выполнится когда бот завершит свою работу
 async def stop_bot():
     try:
-        for admin_id in bot_settings.ADMINS:
-            await bot.send_message(admin_id, "Бот остановлен")
-        scheduler.shutdown()
+        async with db_session.session_factory() as session:
+            for admin_id in await user_manager.get_admins(session=session):
+                await bot.send_message(admin_id, "Бот остановлен")
+            scheduler.shutdown()
     except:
         pass
     loger.error("Бот остановлен!")
