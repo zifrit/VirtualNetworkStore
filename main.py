@@ -2,9 +2,9 @@ import asyncio
 import logging.config
 from aiogram import types
 
-from core.db_connections import db_session
-from crud.user import user_manager
-from src.core.settings import bot, dp, bot_settings
+from src.core.db_connections import db_session
+from src.crud.user import user_manager
+from src.core.settings import bot, dp
 from src.core.logger import LOGGING
 from src.utils.middleware import DatabaseMiddleware
 from src.handlers import (
