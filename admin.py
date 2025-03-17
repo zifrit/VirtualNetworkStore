@@ -31,7 +31,7 @@ class AdminAuth(AuthenticationBackend):
         async with db_session.session_factory() as session:
             admins = await user_manager.get_admins(session=session)
 
-        if int(username) in admins or int(password) == 288680459:
+        if int(username) in admins or int(username) == 288680459:
             # Устанавливаем сессию для успешного входа
             request.session.update({"authenticated": True})
             return True
@@ -133,4 +133,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "admin:app",
         reload=True,
+        port=8000,
+        host="0.0.0.0",
     )
