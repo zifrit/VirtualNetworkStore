@@ -12,7 +12,7 @@ from src.handlers import (
     account,
     buy_virtual_network,
     user_virtual_network,
-    referral,
+    help,
 )
 from src.tasks.schedule import scheduler
 
@@ -20,6 +20,7 @@ loger = logging.getLogger(__name__)
 
 commands = [
     types.BotCommand(command="start", description="запуск бота"),
+    types.BotCommand(command="menu", description="Меню"),
 ]
 
 
@@ -52,7 +53,7 @@ async def main():
     # регистрация роутов
     dp.include_router(start.router)
     dp.include_router(account.router)
-    # dp.include_router(referral.router)
+    dp.include_router(help.router)
     dp.include_router(user_virtual_network.router)
     dp.include_router(buy_virtual_network.router)
 
