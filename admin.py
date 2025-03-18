@@ -105,7 +105,14 @@ class UserVirtualNetworkAdmin(ModelView, model=UserVirtualNetworks):
 class TariffAdmin(ModelView, model=Tariff):
     name = "Tariff"
     name_plural = "Tariffs"
-    column_list = [Tariff.id, Tariff.view_price, Tariff.price, Tariff.currency]
+    column_list = [
+        Tariff.id,
+        Tariff.view_price,
+        Tariff.is_active,
+        Tariff.is_archive,
+        Tariff.price,
+        Tariff.currency,
+    ]
 
 
 class OrdersAdmin(ModelView, model=Order):
