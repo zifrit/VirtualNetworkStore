@@ -57,7 +57,7 @@ LOGGING = {
             "filename": os.path.join(BASE_DIR, "logs", "logs.log"),
             "mode": "a",
             "backupCount": 3,
-            "maxBytes": 50000,
+            "maxBytes": 500000,
             "encoding": "utf-8",
         },
         "admin_logs_filehandler": {
@@ -67,7 +67,7 @@ LOGGING = {
             "filename": os.path.join(BASE_DIR, "admin_logs", "logs.log"),
             "mode": "a",
             "backupCount": 3,
-            "maxBytes": 50000,
+            "maxBytes": 500000,
             "encoding": "utf-8",
         },
     },
