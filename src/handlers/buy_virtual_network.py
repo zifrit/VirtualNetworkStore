@@ -43,7 +43,6 @@ async def tariff_list_handler(
     call: CallbackQuery, state: FSMContext, db_session: AsyncSession
 ):
     """Обработчик, который показывает все тарифы виртуальных сетей"""
-    print(call.from_user.username)
     tariff_list = await tariff_manager.get_tariffs(db_session)
     data_tariff_list = [
         {
