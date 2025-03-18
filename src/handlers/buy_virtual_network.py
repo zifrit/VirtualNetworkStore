@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.kbs.other import move_to
 from src.crud.marzban import marzban_service_manager
 from src.handlers.user_virtual_network import multiplier_billing_period
 from src.kbs import buy_virtual_network as kbs_buy_virtual_network, other
@@ -59,7 +60,7 @@ async def tariff_list_handler(
     )
     await call.message.edit_text(
         text=f"""
-💰 Лучший VPN по лучшей цене!
+Лучшая сеть для анонимного сёрфинга в интернете!
 
 {answer_text}
                 """,
@@ -252,14 +253,14 @@ async def admin_approve_buy_virtual_network(
             chat_id=user_id,
             parse_mode=ParseMode.MARKDOWN,
             text=f"""
-Оплата прошла!!
-
-Вот ваш ключ виртуальной сети:
+Приложение для ключа на IPhone | [V2rayTun](https://apps.apple.com/ru/app/v2raytun/id6476628951) <= нажать для установки
+Приложение для ключа на Android | [v2rayNG](https://play.google.com/store/apps/details?id=com.v2ray.ang) <= нажать для установки
 
 ```
 {virtual_network["vless"]}
 ```
             """,
+            reply_markup=move_to(text="Назад 🔙", callback_data="back_to_start_menu"),
         )
 
 
