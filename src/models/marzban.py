@@ -16,5 +16,8 @@ class MarzbanService(IdCUDMixin):
     user_virtual_networks: Mapped[list["UserVirtualNetworks"]] = relationship(
         back_populates="marzban_service"
     )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean(), default=True, server_default="true"
+    )
 
     repr_columns = ["id", "name"]

@@ -124,7 +124,12 @@ class OrdersAdmin(ModelView, model=Order):
 class MarzbanServiceAdmin(ModelView, model=MarzbanService):
     name = "MarzbanService"
     name_plural = "MarzbanServices"
-    column_list = [MarzbanService.id, MarzbanService.name, MarzbanService.count_users]
+    column_list = [
+        MarzbanService.id,
+        MarzbanService.name,
+        MarzbanService.count_users,
+        MarzbanService.is_active,
+    ]
 
 
 admin.add_view(UserAdmin)
