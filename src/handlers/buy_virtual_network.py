@@ -53,7 +53,7 @@ async def tariff_list_handler(
     ]
     answer_text = "\n".join(
         [
-            f"├  {tariff.term} {billing_period[tariff.billing_period.value]}: {tariff.view_price} (лимит - {tariff.traffic_limit}гб)"
+            f"├  {tariff.term} {billing_period[tariff.billing_period.value]}: {tariff.view_price}"
             for tariff in tariff_list
         ]
     )
