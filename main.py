@@ -20,7 +20,6 @@ loger = logging.getLogger(__name__)
 
 commands = [
     types.BotCommand(command="start", description="запуск бота"),
-    types.BotCommand(command="menu", description="Меню"),
 ]
 
 
